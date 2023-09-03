@@ -6,7 +6,7 @@ from math import *
 from bullet_class import Bullet
 
 clamp = lambda _x, _min, _max: min(_max, max(_min, _x))
-distance2d = lambda pos1, pos2: sqrt(pow(pos2[0] - pos1[0], 2) + pow(pos2[1] - pos1[1], 2))
+
 
 
 def main():
@@ -137,7 +137,7 @@ def main():
 			new_bullet = \
 				Bullet(t_pos, degrees(bullet_angle) + random.randint(-int(radians(bulletSpread * 1000)),
 				                                                     ceil(radians(bulletSpread * 1000)))
-				       / distance2d([
+				       / dist([
 					player_x,
 					player_y
 				], t_pos), defaultBulletSpeed, bulletSize)
@@ -152,7 +152,7 @@ def main():
 				continue
 			bt.x, bt.y = bt.next_pos
 			# -bullets damage
-			if distance2d(bt.pos, [player_x, player_y]) < bulletSize / 2 + playerRadius - 8:
+			if dist(bt.pos, [player_x, player_y]) < bulletSize / 2 + playerRadius - 8:
 				if uber_unter_sphielen_sphielin_sphielin:
 					from pickle import dump, load
 					game_time = round(timer / 60, 2)
