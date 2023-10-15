@@ -3,3 +3,4 @@
 Подготовка к хакатону, наработка разных примеров
 <h2>Участники:</h2>
 <a href = "https://github.com/azaz-azaz"> Neanod </a>
+<a href = "https://github.com/KotSem"> KotSem </a>
