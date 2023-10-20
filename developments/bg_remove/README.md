@@ -7,6 +7,7 @@
 remove_background(inp_path: str = 'input.png', out_path: str = 'output.png')
 <br>берет фото из inp_path и сохраняет в out_path
 <h3>До</h3>
-<img src="input.png">
+<img src="examples/input_example.png">
 <h3>После</h3>
-<img src="output.png">
+<img src="examples/output_example.png">
+
