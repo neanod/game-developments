@@ -80,6 +80,7 @@ def main():
 				match event.type:
 					case pg.QUIT:
 						game_over = True
+						exit()
 					case pg.KEYDOWN:
 						match event.key:
 							case pg.K_w:
@@ -247,3 +248,4 @@ def main():
 
 if __name__ == '__main__':
 	main()
+	exit()
