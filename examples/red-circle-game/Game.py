@@ -1,9 +1,8 @@
 import random
-
 import pygame as pg
-from time import sleep
 from math import sin, cos, radians, atan2, pi
 from player_bullet import Bullet
+import sys
 
 
 def main():
@@ -26,6 +25,13 @@ def main():
 		PLAYER_R = 20
 		
 		SPAWNRATE = 1
+		PAUSE = False
+		
+		MENU_BOX_SIZE = [600, 500]
+		MENU_WHITE_BOX_RECT = pg.Rect(SCREEN_WIDTH / 2 - MENU_BOX_SIZE[0] // 2,
+		                              SCREEN_HEIGHT / 2 - MENU_BOX_SIZE[1] // 2, *MENU_BOX_SIZE)
+		
+		INGAME_MENU_RUNNING = False
 	
 	sc = pg.display.set_mode(Settings.SCREEN_SIZE)
 	"""VARS"""
@@ -58,11 +64,32 @@ def main():
 		do_move = False
 		shoot_cd = 0
 	
+	class Button:
+		def __init__(self, x, y, width, height, text, action=None):
+			self.rect = pg.Rect(x - width / 2, y - height / 2, width, height)
+			self.color = (100, 100, 100)
+			self.text = text
+			self.action = action
+		
+		def draw(self):
+			pg.draw.rect(sc, self.color, self.rect)
+			font = pg.font.Font(None, 36)
+			text = font.render(self.text, True, (255, 255, 255))
+			text_rect = text.get_rect(center=self.rect.center)
+			sc.blit(text, text_rect)
+		
+		def handle_event(self, event):
+			if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+				if self.rect.collidepoint(event.pos):
+					if self.action:  # Выполнение действия, связанного с кнопкой
+						self.action()
+	
 	class ButtonsInfo:
 		W = False
 		A = False
 		S = False
 		D = False
+		ESC = False
 		
 		LMB = False
 		RMB = False
@@ -80,7 +107,7 @@ def main():
 				match event.type:
 					case pg.QUIT:
 						game_over = True
-						exit()
+						quit_game()
 					case pg.KEYDOWN:
 						match event.key:
 							case pg.K_w:
@@ -91,6 +118,8 @@ def main():
 								ButtonsInfo.S = True
 							case pg.K_d:
 								ButtonsInfo.D = True
+							case pg.K_ESCAPE:
+								ButtonsInfo.ESC = True
 					case pg.KEYUP:
 						match event.key:
 							case pg.K_w:
@@ -101,6 +130,8 @@ def main():
 								ButtonsInfo.S = False
 							case pg.K_d:
 								ButtonsInfo.D = False
+							case pg.K_ESCAPE:
+								ButtonsInfo.ESC = False
 					case pg.MOUSEBUTTONDOWN:
 						match event.button:
 							case 1:
@@ -114,6 +145,7 @@ def main():
 							case 0:
 								ButtonsInfo.RMB = False
 			ButtonsInfo.MOUSE_POS = pg.mouse.get_pos()
+			Settings.PAUSE = ButtonsInfo.ESC
 			t += 1
 			"""LOGIC"""
 			clamp_player_pos()
@@ -182,17 +214,26 @@ def main():
 					bullets.pop(i)
 					k -= 1
 				i += 1
-			
+			"""ingame menu"""
+			if Settings.PAUSE:
+				ingame_menu()
+				ButtonsInfo.ESC = False
+				ButtonsInfo.LMB = False
+				ButtonsInfo.RMB = False
+				ButtonsInfo.W = False
+				ButtonsInfo.A = False
+				ButtonsInfo.S = False
+				ButtonsInfo.D = False
 			"""RENDER"""
 			draw_background()
-			draw_player([Player.x, Player.y])
+			draw_player(pos=[Player.x, Player.y], timing=t)
 			for b in bullets:
 				draw_bullet(b.pos)
 			
 			clock.tick(Settings.FPS)
 			pg.display.update()
 	
-	def get_random_spawn_pos():
+	def get_random_spawn_pos() -> list[int, int]:
 		match random.randint(0, 3):
 			case 0:
 				return [random.randint(0, Settings.SCREEN_WIDTH), 0]
@@ -202,7 +243,7 @@ def main():
 				return [random.randint(0, Settings.SCREEN_WIDTH), Settings.SCREEN_HEIGHT]
 			case 3:
 				return [0, random.randint(0, Settings.SCREEN_HEIGHT)]
-				
+	
 	def clamp(_x, _min, _max):
 		return max(_min, min(_max, _x))
 	
@@ -210,9 +251,10 @@ def main():
 		Player.x = clamp(Player.x, Settings.PLAYER_R, Settings.SCREEN_WIDTH - Settings.PLAYER_R)
 		Player.y = clamp(Player.y, Settings.PLAYER_R, Settings.SCREEN_HEIGHT - Settings.PLAYER_R)
 	
-	def draw_player(pos):
-		pg.draw.circle(sc, (155, 0, 0), pos, Settings.PLAYER_R, 6)
-		
+	def draw_player(pos, timing):
+		line = get_outline(timing=timing)
+		pg.draw.circle(sc, (155, 0, 0), pos, Settings.PLAYER_R + line // 2, 6 + line)
+	
 	def draw_bullet(pos):
 		pg.draw.circle(sc, (0, 0, 0), pos, 10)
 	
@@ -240,12 +282,79 @@ def main():
 		sp = get_curved_texture(texture=texture, factor=factor, pos=pos, angle=angle)
 		sc.blit(*sp)
 	
+	def get_outline(timing: int | float) -> int:
+		if timing < 120:
+			return 1
+		timing = timing % 60 * (pi + 1) / 60
+		if timing < pi:
+			return int(pow(sin(2 * timing), 10) * 3 + 1)
+		else:
+			return 1
+	
 	def draw_background():
 		sc.blit(Textures.background[0], [0, 0, Settings.SCREEN_SIZE[0], Settings.SCREEN_SIZE[1]])
 	
-	game()
+	def quit_game():
+		pg.quit()
+		sys.exit()
+	
+	def menu():
+		running = True
+		while running:
+			sc.fill((255, 255, 255))
+			
+			# Обработка событий
+			for event in pg.event.get():
+				if event.type == pg.QUIT:
+					running = False
+				for button in buttons:
+					button.handle_event(event)
+			
+			# Отрисовка кнопок
+			for button in buttons:
+				button.draw()
+			
+			pg.display.flip()
+	
+	def ingame_menu():
+		Settings.INGAME_MENU_RUNNING = True
+		while Settings.INGAME_MENU_RUNNING:
+			pg.draw.rect(sc, (255, 255, 255), Settings.MENU_WHITE_BOX_RECT, border_radius=10)
+			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, 5, 10)
+			
+			# Обработка событий
+			for event in pg.event.get():
+				match event.type:
+					case pg.QUIT:
+						quit_game()
+					case pg.KEYDOWN:
+						if event.key == pg.K_ESCAPE:
+							end_pause()
+				
+				for button in buttons2:
+					button.handle_event(event)
+			
+			# Отрисовка кнопок
+			for button in buttons2:
+				button.draw()
+			
+			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
+	
+	def end_pause():
+		Settings.INGAME_MENU_RUNNING = False
+		Settings.PAUSE = False
+	
+	buttons = [
+		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 - 50, 200, 50, "Играть", game),
+		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 + 50, 200, 50, "Выйти", quit_game)
+	]
+	buttons2 = [
+		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 - 50, 200, 50, "Продолжить", end_pause),
+		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 + 50, 200, 50, "Выйти", quit_game)
+	]
+	
+	menu()
 
 
 if __name__ == '__main__':
 	main()
-	exit()
