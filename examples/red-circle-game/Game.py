@@ -3,6 +3,7 @@ import pygame as pg
 from math import sin, cos, radians, atan2, pi
 from player_bullet import Bullet
 import sys
+import webbrowser
 
 
 def main():
@@ -11,6 +12,8 @@ def main():
 	class Settings:
 		FPS = 60
 		SCREEN_SIZE = [1920, 1080]
+		TEXT_FONT = "fonts\\arial.ttf"
+		FONT_SIZE = 30
 		
 		SCREEN_WIDTH = SCREEN_SIZE[0]
 		SCREEN_HEIGHT = SCREEN_SIZE[1]
@@ -32,6 +35,7 @@ def main():
 		                              SCREEN_HEIGHT / 2 - MENU_BOX_SIZE[1] // 2, *MENU_BOX_SIZE)
 		
 		INGAME_MENU_RUNNING = False
+		CREATORS_MENU_RUNNING = False
 	
 	sc = pg.display.set_mode(Settings.SCREEN_SIZE)
 	"""VARS"""
@@ -66,14 +70,14 @@ def main():
 	
 	class Button:
 		def __init__(self, x, y, width, height, text, action=None):
-			self.rect = pg.Rect(x - width / 2, y - height / 2, width, height)
+			self.rect = pg.Rect(Settings.SCREEN_WIDTH / 2 + x - width / 2, Settings.SCREEN_HEIGHT / 2 + y - height / 2, width, height)
 			self.color = (100, 100, 100)
 			self.text = text
 			self.action = action
 		
 		def draw(self):
-			pg.draw.rect(sc, self.color, self.rect)
-			font = pg.font.Font(None, 36)
+			pg.draw.rect(sc, self.color, self.rect, border_radius=5)
+			font = pg.font.Font(Settings.TEXT_FONT, Settings.FONT_SIZE)
 			text = font.render(self.text, True, (255, 255, 255))
 			text_rect = text.get_rect(center=self.rect.center)
 			sc.blit(text, text_rect)
@@ -320,7 +324,7 @@ def main():
 		Settings.INGAME_MENU_RUNNING = True
 		while Settings.INGAME_MENU_RUNNING:
 			pg.draw.rect(sc, (255, 255, 255), Settings.MENU_WHITE_BOX_RECT, border_radius=10)
-			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, 5, 10)
+			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, width=5, border_radius=10)
 			
 			# Обработка событий
 			for event in pg.event.get():
@@ -331,11 +335,35 @@ def main():
 						if event.key == pg.K_ESCAPE:
 							end_pause()
 				
-				for button in buttons2:
+				for button in buttons_ingame_menu:
 					button.handle_event(event)
 			
 			# Отрисовка кнопок
-			for button in buttons2:
+			for button in buttons_ingame_menu:
+				button.draw()
+			
+			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
+	
+	def creators_menu():
+		Settings.CREATORS_MENU_RUNNING = True
+		while Settings.CREATORS_MENU_RUNNING:
+			pg.draw.rect(sc, (255, 255, 255), Settings.MENU_WHITE_BOX_RECT, border_radius=10)
+			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, width=5, border_radius=10)
+			
+			# Обработка событий
+			for event in pg.event.get():
+				match event.type:
+					case pg.QUIT:
+						quit_game()
+					case pg.KEYDOWN:
+						if event.key == pg.K_ESCAPE:
+							close_creator_menu()
+				
+				for button in buttons_creators:
+					button.handle_event(event)
+			
+			# Отрисовка кнопок
+			for button in buttons_creators:
 				button.draw()
 			
 			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
@@ -344,13 +372,35 @@ def main():
 		Settings.INGAME_MENU_RUNNING = False
 		Settings.PAUSE = False
 	
+	def close_creator_menu():
+		Settings.CREATORS_MENU_RUNNING = False
+	def open_git(name):
+		url = f'https://github.com/{name}'
+		webbrowser.open_new(url=url)
+	
+	def open_agl_vk():
+		webbrowser.open_new("https://lomonosov-gymnasium.edusite.ru/")
+	
+	def open_neanod_git():
+		open_git('azaz-azaz')
+	
+	def open_kotsem_git():
+		open_git('KotSem')
+	
 	buttons = [
-		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 - 50, 200, 50, "Играть", game),
-		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 + 50, 200, 50, "Выйти", quit_game)
+		Button(0, -50, 200, 50, "Играть", game),
+		Button(0, 50, 200, 50, "Выйти", quit_game)
 	]
-	buttons2 = [
-		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 - 50, 200, 50, "Продолжить", end_pause),
-		Button(Settings.SCREEN_WIDTH / 2, Settings.SCREEN_HEIGHT / 2 + 50, 200, 50, "Выйти", quit_game)
+	buttons_ingame_menu = [
+		Button(0, -70, 200, 50, "Продолжить", end_pause),
+		Button(0, 0, 200, 50, "Создатели", creators_menu),
+		Button(0, 70, 200, 50, "Выйти", quit_game)
+	]
+	buttons_creators = [
+		Button(0, -150, 200, 50, "Закрыть", close_creator_menu),
+		Button(0, -70, 560, 60, "АГЛ, 9Т", open_agl_vk),
+		Button(-155, 60, 250, 100, "Никита, Neanod", open_neanod_git),
+		Button(155, 60, 250, 100, "Костя, Kotsem", open_kotsem_git),
 	]
 	
 	menu()
