@@ -1,9 +1,10 @@
 import random
 import pygame as pg
-from math import sin, cos, radians, atan2, pi
+from math import sin, cos, radians, atan2, pi, degrees, dist
 from player_bullet import Bullet
 import sys
 import webbrowser
+from enemy import Enemy
 
 
 def main():
@@ -12,7 +13,8 @@ def main():
 	class Settings:
 		FPS = 60
 		SCREEN_SIZE = [1920, 1080]
-		TEXT_FONT = "fonts\\arial.ttf"
+		TEXT_FONT_ARIAL = "fonts\\arial.ttf"
+		TEXT_FONT_TIMES_NEW_ROMAN = "fonts\\timesnewroman.ttf"
 		FONT_SIZE = 30
 		
 		SCREEN_WIDTH = SCREEN_SIZE[0]
@@ -27,7 +29,7 @@ def main():
 		
 		PLAYER_R = 20
 		
-		SPAWNRATE = 1
+		SPAWNRATE = 1.2
 		PAUSE = False
 		
 		MENU_BOX_SIZE = [600, 500]
@@ -36,6 +38,8 @@ def main():
 		
 		INGAME_MENU_RUNNING = False
 		CREATORS_MENU_RUNNING = False
+		
+		ENEMY_SIZE = 200
 	
 	sc = pg.display.set_mode(Settings.SCREEN_SIZE)
 	"""VARS"""
@@ -58,6 +62,29 @@ def main():
 			x := pg.image.load("textures/background.png").convert(),
 			x.get_rect().size,
 		]
+		enemy = [
+			x := pg.image.load("textures/enemy1.png").convert_alpha(),
+			x.get_rect().size
+		]
+
+	def get_random_spawn_pos() -> list[int, int]:
+		right = Settings.SCREEN_WIDTH + Settings.ENEMY_SIZE // 2
+		bottom = Settings.SCREEN_HEIGHT + Settings.ENEMY_SIZE // 2
+		left = -Settings.ENEMY_SIZE // 2
+		up = -Settings.ENEMY_SIZE // 2
+		match random.randint(0, 3):
+			case 0:
+				return [random.randint(left, right), up]
+			case 1:
+				return [right, random.randint(up, bottom)]
+			case 2:
+				return [random.randint(left, right), bottom]
+			case 3:
+				return [left, random.randint(up, bottom)]
+		
+	class Enemies:
+		enemy_list: list[Enemy] = list()
+		enemy_list.append(Enemy(get_random_spawn_pos))
 	
 	class Player:
 		x, y = Settings.SCREEN_CENTER
@@ -77,7 +104,7 @@ def main():
 		
 		def draw(self):
 			pg.draw.rect(sc, self.color, self.rect, border_radius=5)
-			font = pg.font.Font(Settings.TEXT_FONT, Settings.FONT_SIZE)
+			font = pg.font.Font(Settings.TEXT_FONT_TIMES_NEW_ROMAN, Settings.FONT_SIZE)
 			text = font.render(self.text, True, (255, 255, 255))
 			text_rect = text.get_rect(center=self.rect.center)
 			sc.blit(text, text_rect)
@@ -206,7 +233,9 @@ def main():
 				
 				bullets.append(new_bullet)
 			
-			"""bullets update"""
+			"""
+			bullets update
+			"""
 			i = 0
 			k = len(bullets)
 			while i < k:
@@ -216,6 +245,34 @@ def main():
 					b.set_next_pos()
 				else:
 					bullets.pop(i)
+					k -= 1
+				i += 1
+			"""
+			enemy update
+			"""
+			i = 0
+			k = len(Enemies.enemy_list)
+			while i < k:
+				e = Enemies.enemy_list[i]
+				# world borders
+				if e.hp >= 0:
+					"""moving"""
+					e.do_moving(target_pos=[Player.x, Player.y])
+					"""damage"""
+					
+					ii = 0
+					kk = len(bullets)
+					while ii < kk:
+						b = bullets[ii]
+						# collision
+						if dist(b.pos, e.pos) < Settings.ENEMY_SIZE / 2:
+							kk -= 1
+							bullets.pop(i)
+							e.hp -= 4
+						ii += 1
+					
+				else:
+					Enemies.enemy_list.pop(i)
 					k -= 1
 				i += 1
 			"""ingame menu"""
@@ -228,25 +285,25 @@ def main():
 				ButtonsInfo.A = False
 				ButtonsInfo.S = False
 				ButtonsInfo.D = False
+			"""enemy spawn"""
+			if t % (Settings.FPS // Settings.SPAWNRATE) == 0:
+				Enemies.enemy_list.append(Enemy(get_random_spawn_pos))
 			"""RENDER"""
 			draw_background()
 			draw_player(pos=[Player.x, Player.y], timing=t)
 			for b in bullets:
 				draw_bullet(b.pos)
-			
+			for e in Enemies.enemy_list:
+				draw_enemy(e.pos, degrees(e.angle) + 135)
+				rects = e.get_hp_rect_args(Settings.ENEMY_SIZE)
+				pg.draw.rect(sc, (0, 200, 0), rects[1], border_radius=5)
+				pg.draw.rect(sc, (0, 0, 0), rects[0], 3, border_radius=5)
+
 			clock.tick(Settings.FPS)
 			pg.display.update()
 	
-	def get_random_spawn_pos() -> list[int, int]:
-		match random.randint(0, 3):
-			case 0:
-				return [random.randint(0, Settings.SCREEN_WIDTH), 0]
-			case 1:
-				return [Settings.SCREEN_WIDTH, random.randint(0, Settings.SCREEN_HEIGHT)]
-			case 2:
-				return [random.randint(0, Settings.SCREEN_WIDTH), Settings.SCREEN_HEIGHT]
-			case 3:
-				return [0, random.randint(0, Settings.SCREEN_HEIGHT)]
+	def draw_enemy(pos, angle):
+		draw_curved_texture(Textures.enemy, (Settings.ENEMY_SIZE / Textures.enemy[1][1]), pos=pos, angle=angle)
 	
 	def clamp(_x, _min, _max):
 		return max(_min, min(_max, _x))
@@ -311,6 +368,10 @@ def main():
 			for event in pg.event.get():
 				if event.type == pg.QUIT:
 					running = False
+				elif event.type == pg.KEYDOWN:
+					if event.key == pg.K_KP_ENTER:
+						game()
+						running = False
 				for button in buttons:
 					button.handle_event(event)
 			
@@ -374,6 +435,7 @@ def main():
 	
 	def close_creator_menu():
 		Settings.CREATORS_MENU_RUNNING = False
+	
 	def open_git(name):
 		url = f'https://github.com/{name}'
 		webbrowser.open_new(url=url)
