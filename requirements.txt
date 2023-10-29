@@ -2,3 +2,4 @@ Pillow
 rembg
 pygame
 openai
+g4f
