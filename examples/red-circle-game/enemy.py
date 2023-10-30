@@ -24,7 +24,15 @@ class Enemy:
 			self.speed вычисляется по принципу:
 			atan в пределах speed_dia
 			"""
-			self.angle = -atan2(self.y - target_pos[1], self.x - target_pos[0]) + pi * 0.5
+			target_angle = -atan2(self.y - target_pos[1], self.x - target_pos[0]) + pi * 0.5
+			angle_r = self.angle - target_angle
+			rotate_speed = 0.04
+			if abs(angle_r) > rotate_speed * 2:
+				if angle_r % (2 * pi) < -angle_r % (2 * pi):
+					# left
+					self.angle -= rotate_speed
+				else:
+					self.angle += rotate_speed
 			self.x, self.y = self.next_pos
 	
 	def get_hp_rect_args(self, size):
@@ -32,6 +40,9 @@ class Enemy:
 		black_rect = [self.x - size / 2, self.y - size / 2 - 2 * h, size, h]
 		green_rect = [self.x - size / 2, self.y - size / 2 - 2 * h, size * self.hp / self.max_hp, h]
 		return [black_rect, green_rect]
+	
+	def warp_jump(self):
+		self.x, self.y = [self.x + sin(-self.angle) * self.speed * 5, self.y - cos(-self.angle) * self.speed * 5]
 		
 	@property
 	def next_pos(self):

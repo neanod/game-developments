@@ -1,16 +1,21 @@
 import random
 import pygame as pg
-import pygame_gui as pgg
 from pygame_gui import UIManager
 from pygame_gui import elements
 from math import sin, cos, radians, atan2, pi, degrees, dist
 from player_bullet import Bullet
 import sys
 import webbrowser
+from pickle import dump, load
 from enemy import Enemy
 
+# TODO: Добавить усложнение со временем
+# TODO: В настройки: громкость музыки, выбор заднего фона(выпадающее меню)
 
-# TODO: Добавить сохранение настройки и экран смерти
+"""
+Кнопки в меню жестко закостылены без использования pygame_gui, но зачем менять что работает
+.dll в файле настроек чисто для понтов, шифрования нет
+"""
 
 
 def main():
@@ -30,6 +35,8 @@ def main():
 		SCREEN_HEIGHT = SCREEN_SIZE[1]
 		
 		SCREEN_CENTER = [SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2]
+		
+		SPAWN_POS = SCREEN_CENTER
 		
 		DEFAULT_PLAYER_SPEED = 8
 		DEFAULT_PLAYER_SHOOT_CD = 2
@@ -51,8 +58,24 @@ def main():
 		CREATORS_MENU_RUNNING = False
 		SETTINGS_MENU_RUNNING = False
 		START_MENU_RUNNING = False
+		GAME_RUNNING = False
+		DEATH_MENU_RUNNING = False
 		
 		ENEMY_SIZE = 200
+		PLAYER_HP_BAR_SIZE = PLAYER_R * 2
+		HP_PLAYER = 128
+	
+	try:
+		with open('saves/settings.dll', 'rb') as f:
+			data = load(f)
+			Settings.SPAWNRATE, Settings.RENDER_MODE = data
+	except FileNotFoundError:
+		print("создан файл сохранения настроек")
+		with open('saves/settings.dll', 'wb') as f:
+			dump([Settings.SPAWNRATE, Settings.RENDER_MODE], f)
+	except EOFError:
+		with open('saves/settings.dll', 'wb') as f:
+			dump([Settings.SPAWNRATE, Settings.RENDER_MODE], f)
 	
 	sc = pg.display.set_mode(Settings.SCREEN_SIZE, pg.DOUBLEBUF)
 	"""VARS"""
@@ -97,16 +120,16 @@ def main():
 	
 	class Enemies:
 		enemy_list: list[Enemy] = list()
-		enemy_list.append(Enemy(get_random_spawn_pos))
 	
 	class Player:
-		x, y = Settings.SCREEN_CENTER
+		x, y = Settings.SPAWN_POS
 		speed = 0
 		speed_x = 0
 		speed_y = 0
 		speed_direct = 0
 		do_move = False
 		shoot_cd = 0
+		hp = Settings.HP_PLAYER
 	
 	class Button:
 		def __init__(self, x, y, width, height, text, action=None):
@@ -128,6 +151,8 @@ def main():
 				if self.rect.collidepoint(event.pos):
 					if self.action:  # Выполнение действия, связанного с кнопкой
 						self.action()
+					return True
+			return False
 	
 	class ButtonsInfo:
 		W = False
@@ -143,16 +168,15 @@ def main():
 	
 	def game():
 		
+		Settings.GAME_RUNNING = True
 		close_start_menu()
-		game_over = False
 		t = 0
 		bullets = list()
 		
-		while not game_over:
+		while Settings.GAME_RUNNING:
 			for event in pg.event.get():
 				match event.type:
 					case pg.QUIT:
-						game_over = True
 						quit_game()
 					case pg.KEYDOWN:
 						match event.key:
@@ -273,8 +297,7 @@ def main():
 				if e.hp >= 0:
 					"""moving"""
 					e.do_moving(target_pos=[Player.x, Player.y])
-					"""damage"""
-					
+					"""damage to enemy"""
 					ii = 0
 					kk = len(bullets)
 					while ii < kk:
@@ -288,7 +311,13 @@ def main():
 								pass
 							e.hp -= 4
 						ii += 1
-				
+					"""damage to player"""
+					if dist([Player.x, Player.y], e.pos) <= 30:
+						Player.hp -= 4
+						e.warp_jump()
+						if Player.hp <= 0:
+							Settings.GAME_RUNNING = False
+
 				else:
 					Enemies.enemy_list.pop(i)
 					k -= 1
@@ -308,7 +337,7 @@ def main():
 				Enemies.enemy_list.append(Enemy(get_random_spawn_pos))
 			"""RENDER"""
 			draw_background()
-			draw_player(pos=[Player.x, Player.y], timing=t)
+			draw_player(pos=[Player.x, Player.y], timing=t, hp=Player.hp)
 			for b in bullets:
 				draw_bullet(b.pos)
 			for e in Enemies.enemy_list:
@@ -320,14 +349,25 @@ def main():
 			clock.tick(Settings.FPS)
 			pg.display.update()
 			
+		death(t)
+	
 	def change_render_mode():
 		Settings.RENDER_MODE += 1
 		if Settings.RENDER_MODE == Settings.RENDER_MODE_N:
 			Settings.RENDER_MODE = 0
-		buttons_settings[1] = Button(0, -50, 400, 50, f"Режим отрисовки: {Settings.RENDER_MODE + 1}-й", change_render_mode)
+		buttons_settings[0] = Button(0, -150, 400, 50, f"Режим отрисовки: {Settings.RENDER_MODE + 1}-й",
+		                             change_render_mode)
+	
+	def change_render_mode_back():
+		Settings.RENDER_MODE -= 1
+		if Settings.RENDER_MODE == -1:
+			Settings.RENDER_MODE = Settings.RENDER_MODE_N - 1
+		buttons_settings[0] = Button(0, -150, 400, 50, f"Режим отрисовки: {Settings.RENDER_MODE + 1}-й",
+		                             change_render_mode)
 	
 	def draw_enemy(pos, angle):
-		render_sprite(texture=Textures.enemy, factor=(Settings.ENEMY_SIZE / Textures.enemy[1][1]), pos=pos, angle=angle, render_mode=Settings.RENDER_MODE)
+		render_sprite(texture=Textures.enemy, factor=(Settings.ENEMY_SIZE / Textures.enemy[1][1]), pos=pos, angle=angle,
+		              render_mode=Settings.RENDER_MODE)
 	
 	def clamp(_x, _min, _max):
 		return max(_min, min(_max, _x))
@@ -336,9 +376,23 @@ def main():
 		Player.x = clamp(Player.x, Settings.PLAYER_R, Settings.SCREEN_WIDTH - Settings.PLAYER_R)
 		Player.y = clamp(Player.y, Settings.PLAYER_R, Settings.SCREEN_HEIGHT - Settings.PLAYER_R)
 	
-	def draw_player(pos, timing):
+	def draw_player(pos, timing, hp):
 		line = get_outline(timing=timing)
 		pg.draw.circle(sc, (155, 0, 0), pos, Settings.PLAYER_R + line // 2, 6 + line)
+		
+		size = [Settings.PLAYER_HP_BAR_SIZE, 20]
+		left, top = Player.x - Settings.PLAYER_HP_BAR_SIZE / 2, Player.y - Settings.PLAYER_R - 10 - size[1]
+		pg.draw.rect(sc, (0, 255, 0), [
+			left,
+			top,
+			Player.hp / Settings.HP_PLAYER * Settings.PLAYER_HP_BAR_SIZE,
+			size[1]
+		], border_radius=5)
+		pg.draw.rect(sc, (0, 0, 0), [
+			left,
+			top,
+			*size,
+		], width=3, border_radius=5)
 	
 	def draw_bullet(pos):
 		pg.draw.circle(sc, (0, 0, 0), pos, 10)
@@ -415,11 +469,11 @@ def main():
 				elif event.type == pg.KEYDOWN:
 					if event.key == pg.K_KP_ENTER:
 						game()
-				for button in buttons:
+				for button in buttons_start:
 					button.handle_event(event)
 			
 			# Отрисовка кнопок
-			for button in buttons:
+			for button in buttons_start:
 				button.draw()
 			
 			pg.display.flip()
@@ -478,14 +532,15 @@ def main():
 			
 			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
 	
-	def settings_menu():
-		do_dark_screen()
+	def settings_menu(dark_screen=True):
+		if dark_screen:
+			do_dark_screen()
 		Settings.SETTINGS_MENU_RUNNING = True
-		close_start_menu()
+		settings_menu.save = True
 		ui_manager = UIManager(Settings.SCREEN_SIZE)
 		
 		size = [400, 20]
-		offset = [0, 70]
+		offset = [0, 170]
 		rect = pg.Rect(
 			[Settings.SCREEN_WIDTH / 2 - size[0] / 2 + offset[0], Settings.SCREEN_HEIGHT / 2 - size[1] / 2 + offset[1],
 			 size[0], size[1]])
@@ -526,23 +581,112 @@ def main():
 			
 			# надпись
 			font = pg.font.Font(Settings.TEXT_FONT_TIMES_NEW_ROMAN, Settings.FONT_SIZE)
-			text = font.render("Спавнрейт врагов", True, (20, 20, 20), wraplength=spawnrate_slider.get_abs_rect().width)
+			text = font.render("Спавнрейт врагов", True, (40, 40, 40), wraplength=spawnrate_slider.get_abs_rect().width)
 			base = pg.Rect(rect[0], rect[1], *rect[2:]).center
 			t_rect = text.get_rect()
 			now = t_rect.center
 			
 			offset = [0, 50]
 			
-			res_rect = pg.Rect(t_rect[0] + base[0] - now[0] + offset[0], t_rect[1] + base[1] - now[0] + offset[1],
-			                   *t_rect.size)
+			res_rect = pg.Rect(
+				t_rect[0] + base[0] - now[0] + offset[0],
+				t_rect[1] + base[1] - now[0] + offset[1],
+				*t_rect.size,
+			)
 			
 			sc.blit(text, res_rect)
 			
 			# Апдейт
 			pg.display.update(Settings.SETTINGS_WHITE_BOX_RECT)
-		Settings.SPAWNRATE = spawnrate_slider.current_value
+		if settings_menu.save:
+			Settings.SPAWNRATE = spawnrate_slider.current_value
+			try:
+				with open('saves/settings.dll', 'wb') as file:
+					dump([Settings.SPAWNRATE, Settings.RENDER_MODE], file)
+			except FileNotFoundError:
+				print("Ошибка записи настроек. Возможно вы удалили или переименовали\"settings.dll\".")
+				quit_game()
+		else:
+			change_render_mode_back()
+	
+	def death(ticks_played):
+		# data clear
+		Player.x, Player.y = Settings.SPAWN_POS
+		Player.speed = 0
+		Player.speed_x = 0
+		Player.speed_y = 0
+		Player.speed_direct = 0
+		Player.do_move = False
+		Player.shoot_cd = 0
+		Player.hp = Settings.HP_PLAYER
 		
-		start_menu()
+		Enemies.enemy_list = list()
+		
+		ButtonsInfo.W = False
+		ButtonsInfo.A = False
+		ButtonsInfo.S = False
+		ButtonsInfo.D = False
+		ButtonsInfo.ESC = False
+		ButtonsInfo.LMB = False
+		ButtonsInfo.RMB = False
+		ButtonsInfo.MOUSE_POS = [0, 0]
+		# save
+		try:
+			with open('saves/player_record.pickle', 'rb') as f0:
+				rec = load(f0)
+				if not isinstance(rec, int):
+					with open('saves/player_record.pickle', 'wb') as f2:
+						dump(ticks_played, f2)
+					print("Внутренняя ошибка программы 1")
+		except FileNotFoundError:
+			with open('saves/player_record.pickle', 'wb') as f2:
+				dump(ticks_played, f2)
+			print("Ошибка считывания рекорда. Возможно вы удалили или переименовали\"player_record.pickle.dll\".")
+			rec = ticks_played
+			
+		if rec < ticks_played:
+			# новый рекорд
+			with open('saves/player_record.pickle', 'wb') as f3:
+				dump(ticks_played, f3)
+			rec = ticks_played
+		# menu
+		do_dark_screen()
+		Settings.DEATH_MENU_RUNNING = True
+		
+		font = pg.font.Font(Settings.TEXT_FONT_TIMES_NEW_ROMAN, Settings.FONT_SIZE)
+		text = font.render(
+			f"Результат: {round(ticks_played / Settings.FPS, 2)}сек, рекорд - {round(rec / Settings.FPS, 2)}",
+			True,
+			(0, 0, 0),
+		)
+		text_rect = text.get_rect(center=[Settings.SCREEN_CENTER[0], Settings.SCREEN_CENTER[1] - 120])
+		big_font = pg.font.Font(Settings.TEXT_FONT_TIMES_NEW_ROMAN, Settings.FONT_SIZE + 20)
+		text2 = big_font.render("Вы проиграли.", True, (0, 0, 0))
+		text2_rect = text2.get_rect(center=[Settings.SCREEN_CENTER[0], Settings.SCREEN_CENTER[1] - 180])
+		while Settings.DEATH_MENU_RUNNING:
+			pg.draw.rect(sc, (255, 255, 255), Settings.MENU_WHITE_BOX_RECT, border_radius=10)
+			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, width=5, border_radius=10)
+			
+			# Обработка событий
+			for event in pg.event.get():
+				match event.type:
+					case pg.QUIT:
+						quit_game()
+					case pg.KEYDOWN:
+						if event.key == pg.K_ESCAPE:
+							close_death_menu()
+				
+				for button in buttons_death_menu:
+					button.handle_event(event)
+			
+			# Отрисовка кнопок
+			for button in buttons_death_menu:
+				button.draw()
+			# надпись о времени игры и смерти
+			sc.blit(text, text_rect)
+			sc.blit(text2, text2_rect)
+			
+			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
 	
 	def end_pause():
 		Settings.INGAME_MENU_RUNNING = False
@@ -554,8 +698,15 @@ def main():
 	def close_creator_menu():
 		Settings.CREATORS_MENU_RUNNING = False
 	
+	def close_settings_menu_save():
+		Settings.SETTINGS_MENU_RUNNING = False
+	
 	def close_settings_menu():
 		Settings.SETTINGS_MENU_RUNNING = False
+		settings_menu.save = False
+	
+	def close_death_menu():
+		Settings.DEATH_MENU_RUNNING = False
 	
 	def open_git(name):
 		url = f'https://github.com/{name}'
@@ -570,7 +721,14 @@ def main():
 	def open_kotsem_git():
 		open_git('KotSem')
 	
-	buttons = [
+	def open_settings_without_darkness():
+		settings_menu(False)
+	
+	def reset_best_result():
+		with open('saves/player_record.pickle', 'wb') as file:
+			dump(0, file)
+		
+	buttons_start = [
 		Button(0, -60, 200, 50, "Играть", game),
 		Button(0, 60, 200, 50, "Настройки", settings_menu),
 		Button(0, 150, 200, 50, "Создатели", creators_menu),
@@ -578,8 +736,9 @@ def main():
 	]
 	buttons_ingame_menu = [
 		Button(0, -70, 200, 50, "Продолжить", end_pause),
-		Button(0, 0, 200, 50, "Создатели", white_creators_menu),
-		Button(0, 70, 200, 50, "Выйти", quit_game),
+		Button(0, 0, 200, 50, "Настройки", open_settings_without_darkness),
+		Button(0, 70, 200, 50, "Создатели", white_creators_menu),
+		Button(0, 140, 200, 50, "Выйти", quit_game),
 	]
 	buttons_creators = [
 		Button(0, -150, 200, 50, "Закрыть", close_creator_menu),
@@ -588,10 +747,15 @@ def main():
 		Button(155, 60, 250, 100, "Костя, Kotsem", open_kotsem_git),
 	]
 	buttons_settings = [
-		Button(0, -150, 400, 50, "Закрыть", close_settings_menu),
-		Button(0, -50, 400, 50, f"Режим отрисовки: {Settings.RENDER_MODE + 1}-й", change_render_mode),
+		Button(0, -150, 400, 50, f"Режим отрисовки: {Settings.RENDER_MODE + 1}-й", change_render_mode),
+		Button(0, -50, 400, 50, "Сбросить рекорд", reset_best_result),
+		Button(-115, 50, 170, 50, "Сохранить", close_settings_menu_save),
+		Button(115, 50, 170, 50, "Отменить", close_settings_menu),
 	]
-	
+	buttons_death_menu = [
+		Button(0, -50, 200, 50, "Заново", start_menu),
+		Button(0, 50, 200, 50, "Выйти", quit_game),
+	]
 	start_menu()
 
 
