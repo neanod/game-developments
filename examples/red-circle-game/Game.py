@@ -10,6 +10,7 @@ from pickle import dump, load
 from enemy import Enemy
 
 # TODO: В настройки: громкость музыки, выбор заднего фона(выпадающее меню)
+# TODO: Добавить ачивки
 
 """
 Кнопки в меню жестко закостылены без использования pygame_gui, но зачем менять что работает
@@ -29,6 +30,7 @@ def main():
 		
 		RENDER_MODE = 0
 		RENDER_MODE_N = 2
+		BACKGROUND = 'Голубой градиент'
 		
 		SCREEN_WIDTH = SCREEN_SIZE[0]
 		SCREEN_HEIGHT = SCREEN_SIZE[1]
@@ -48,10 +50,11 @@ def main():
 		PAUSE = False
 		
 		MENU_BOX_SIZE = [600, 500]
+		SETTINGS_BOX_SIZE = [600, 800]
 		MENU_WHITE_BOX_RECT = pg.Rect(SCREEN_WIDTH / 2 - MENU_BOX_SIZE[0] // 2,
 		                              SCREEN_HEIGHT / 2 - MENU_BOX_SIZE[1] // 2, *MENU_BOX_SIZE)
-		SETTINGS_WHITE_BOX_RECT = pg.Rect(SCREEN_WIDTH / 2 - MENU_BOX_SIZE[0] // 2,
-		                                  SCREEN_HEIGHT / 2 - MENU_BOX_SIZE[1] // 2, *MENU_BOX_SIZE)
+		SETTINGS_WHITE_BOX_RECT = pg.Rect(SCREEN_WIDTH / 2 - SETTINGS_BOX_SIZE[0] // 2,
+		                                  SCREEN_HEIGHT / 2 - SETTINGS_BOX_SIZE[1] // 2, *SETTINGS_BOX_SIZE)
 		
 		INGAME_MENU_RUNNING = False
 		CREATORS_MENU_RUNNING = False
@@ -67,15 +70,18 @@ def main():
 	try:
 		with open('saves/settings.dll', 'rb') as f:
 			data = load(f)
-			Settings.SPAWNRATE, Settings.RENDER_MODE = data
+			Settings.SPAWNRATE, Settings.RENDER_MODE, Settings.BACKGROUND = data
 	except FileNotFoundError:
 		print("создан файл сохранения настроек")
 		with open('saves/settings.dll', 'wb') as f:
-			dump([Settings.SPAWNRATE, Settings.RENDER_MODE], f)
+			dump([Settings.SPAWNRATE, Settings.RENDER_MODE, Settings.BACKGROUND], f)
 	except EOFError:
 		with open('saves/settings.dll', 'wb') as f:
-			dump([Settings.SPAWNRATE, Settings.RENDER_MODE], f)
-	
+			dump([Settings.SPAWNRATE, Settings.RENDER_MODE, Settings.BACKGROUND], f)
+	except ValueError:
+		with open('saves/settings.dll', 'wb') as f:
+			dump([Settings.SPAWNRATE, Settings.RENDER_MODE, Settings.BACKGROUND], f)
+		
 	sc = pg.display.set_mode(Settings.SCREEN_SIZE, pg.DOUBLEBUF)
 	"""VARS"""
 	pg.init()
@@ -83,23 +89,32 @@ def main():
 	"""LOADING IMAGES"""
 	
 	class Textures:
+		bg_dict: dict = {
+			'Горы': 'textures/background_cliff.jpg',
+			'Голубой градиент': 'textures/background_blue_gradient.png',
+		}
+		
 		example_square = [
 			x := pg.image.load("textures/white_example_square.png").convert_alpha(),
 			x.get_rect().size,
 		]
-		
 		example = [
 			x := pg.image.load("textures/white_example_rect.png").convert_alpha(),
 			x.get_rect().size,
 		]
-		
 		background = [
-			x := pg.image.load("textures/background.png").convert(),
+			x := pg.transform.scale(pg.image.load(bg_dict[Settings.BACKGROUND]).convert(), Settings.SCREEN_SIZE),
 			x.get_rect().size,
 		]
 		enemy = [
 			x := pg.image.load("textures/enemy1.png").convert_alpha(),
 			x.get_rect().size
+		]
+	
+	def update_background():
+		Textures.background = [
+			x := pg.transform.scale(pg.image.load(Textures.bg_dict[Settings.BACKGROUND]).convert(), Settings.SCREEN_SIZE),
+			x.get_rect().size,
 		]
 	
 	def get_random_spawn_pos() -> list[int, int]:
@@ -336,7 +351,7 @@ def main():
 				Enemies.enemy_list.append(Enemy(get_random_spawn_pos))
 			"""RENDER"""
 			draw_background()
-			draw_player(pos=[Player.x, Player.y], timing=t, hp=Player.hp)
+			draw_player(pos=[Player.x, Player.y], timing=t)
 			for b in bullets:
 				draw_bullet(b.pos)
 			for e in Enemies.enemy_list:
@@ -375,23 +390,31 @@ def main():
 		Player.x = clamp(Player.x, Settings.PLAYER_R, Settings.SCREEN_WIDTH - Settings.PLAYER_R)
 		Player.y = clamp(Player.y, Settings.PLAYER_R, Settings.SCREEN_HEIGHT - Settings.PLAYER_R)
 	
-	def draw_player(pos, timing, hp):
+	def draw_player(pos, timing):
 		line = get_outline(timing=timing)
 		pg.draw.circle(sc, (155, 0, 0), pos, Settings.PLAYER_R + line // 2, 6 + line)
 		
 		size = [Settings.PLAYER_HP_BAR_SIZE, 20]
 		left, top = Player.x - Settings.PLAYER_HP_BAR_SIZE / 2, Player.y - Settings.PLAYER_R - 10 - size[1]
+		border_radius = 8
+		pg.draw.rect(sc, (200, 0, 0), [
+			left,
+			top,
+			*size,
+		], border_radius=border_radius)
+		
 		pg.draw.rect(sc, (0, 255, 0), [
 			left,
 			top,
 			Player.hp / Settings.HP_PLAYER * Settings.PLAYER_HP_BAR_SIZE,
 			size[1]
-		], border_radius=5)
+		], border_radius=border_radius)
+		
 		pg.draw.rect(sc, (0, 0, 0), [
 			left,
 			top,
 			*size,
-		], width=3, border_radius=5)
+		], width=2, border_radius=border_radius)
 	
 	def draw_bullet(pos):
 		pg.draw.circle(sc, (0, 0, 0), pos, 10)
@@ -481,8 +504,8 @@ def main():
 		do_dark_screen()
 		Settings.INGAME_MENU_RUNNING = True
 		while Settings.INGAME_MENU_RUNNING:
-			pg.draw.rect(sc, (255, 255, 255), Settings.MENU_WHITE_BOX_RECT, border_radius=10)
-			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, width=5, border_radius=10)
+			pg.draw.rect(sc, (255, 255, 255), Settings.SETTINGS_WHITE_BOX_RECT, border_radius=10)
+			pg.draw.rect(sc, (100, 100, 100), Settings.SETTINGS_WHITE_BOX_RECT, width=5, border_radius=10)
 			
 			# Обработка событий
 			for event in pg.event.get():
@@ -500,7 +523,7 @@ def main():
 			for button in buttons_ingame_menu:
 				button.draw()
 			
-			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
+			pg.display.update(Settings.SETTINGS_WHITE_BOX_RECT)
 	
 	def white_creators_menu():
 		creators_menu(dark_screen=False)
@@ -510,8 +533,8 @@ def main():
 			do_dark_screen()
 		Settings.CREATORS_MENU_RUNNING = True
 		while Settings.CREATORS_MENU_RUNNING:
-			pg.draw.rect(sc, (255, 255, 255), Settings.MENU_WHITE_BOX_RECT, border_radius=10)
-			pg.draw.rect(sc, (100, 100, 100), Settings.MENU_WHITE_BOX_RECT, width=5, border_radius=10)
+			pg.draw.rect(sc, (255, 255, 255), Settings.SETTINGS_WHITE_BOX_RECT, border_radius=10)
+			pg.draw.rect(sc, (100, 100, 100), Settings.SETTINGS_WHITE_BOX_RECT, width=5, border_radius=10)
 			
 			# Обработка событий
 			for event in pg.event.get():
@@ -529,7 +552,7 @@ def main():
 			for button in buttons_creators:
 				button.draw()
 			
-			pg.display.update(Settings.MENU_WHITE_BOX_RECT)
+			pg.display.update(Settings.SETTINGS_BOX_SIZE)
 	
 	def settings_menu(dark_screen=True):
 		if dark_screen:
@@ -538,16 +561,36 @@ def main():
 		settings_menu.save = True
 		ui_manager = UIManager(Settings.SCREEN_SIZE)
 		
-		size = [400, 20]
-		offset = [0, 170]
-		rect = pg.Rect(
-			[Settings.SCREEN_WIDTH / 2 - size[0] / 2 + offset[0], Settings.SCREEN_HEIGHT / 2 - size[1] / 2 + offset[1],
-			 size[0], size[1]])
+		size = [400, 40]
+		offset_slider_spawnrate = [0, 170]
+		offset_drop_menu = [0, 240]
+		rect_spawnrate = pg.Rect(
+			[
+				Settings.SCREEN_WIDTH / 2 - size[0] / 2 + offset_slider_spawnrate[0],
+				Settings.SCREEN_HEIGHT / 2 - size[1] / 2 + offset_slider_spawnrate[1],
+				size[0],
+				size[1],
+			]
+		)
+		rect_drop_menu = pg.Rect(
+			[
+				Settings.SCREEN_WIDTH / 2 - size[0] / 2 + offset_drop_menu[0],
+				Settings.SCREEN_HEIGHT / 2 - size[1] / 2 + offset_drop_menu[1],
+				size[0],
+				size[1],
+			]
+		)
 		
 		spawnrate_slider = elements.ui_horizontal_slider.UIHorizontalSlider(
-			relative_rect=rect,
+			relative_rect=rect_spawnrate,
 			start_value=Settings.SPAWNRATE,
 			value_range=[0.5, 2],
+			manager=ui_manager,
+		)
+		background_menu = elements.ui_drop_down_menu.UIDropDownMenu(
+			options_list=Textures.bg_dict.keys(),
+			starting_option=Settings.BACKGROUND,
+			relative_rect=rect_drop_menu,
 			manager=ui_manager,
 		)
 		
@@ -580,31 +623,31 @@ def main():
 			
 			# надпись
 			font = pg.font.Font(Settings.TEXT_FONT_TIMES_NEW_ROMAN, Settings.FONT_SIZE)
-			text = font.render("Спавнрейт врагов", True, (40, 40, 40), wraplength=spawnrate_slider.get_abs_rect().width)
-			base = pg.Rect(rect[0], rect[1], *rect[2:]).center
-			t_rect = text.get_rect()
+			text_enemy_spawnrate = font.render("Спавнрейт врагов", True, (40, 40, 40), wraplength=spawnrate_slider.get_abs_rect().width)
+			text_background_choose = font.render("Задний фон", True, (40, 40, 40), wraplength=spawnrate_slider.get_abs_rect().width)
+			base = rect_drop_menu.center
+			t_rect = text_enemy_spawnrate.get_rect()
 			now = t_rect.center
 			
-			offset = [0, 50]
+			offset_slider_spawnrate = [0, -10]
+			offset_drop_menu = [0, 0]
 			
 			res_rect = pg.Rect(
-				t_rect[0] + base[0] - now[0] + offset[0],
-				t_rect[1] + base[1] - now[0] + offset[1],
+				t_rect[0] + base[0] - now[0] + offset_slider_spawnrate[0],
+				t_rect[1] + base[1] - now[0] + offset_slider_spawnrate[1],
 				*t_rect.size,
 			)
 			
-			sc.blit(text, res_rect)
+			sc.blit(text_enemy_spawnrate, res_rect)
 			
 			# Апдейт
 			pg.display.update(Settings.SETTINGS_WHITE_BOX_RECT)
 		if settings_menu.save:
+			Settings.BACKGROUND = background_menu.selected_option
 			Settings.SPAWNRATE = spawnrate_slider.current_value
-			try:
-				with open('saves/settings.dll', 'wb') as file:
-					dump([Settings.SPAWNRATE, Settings.RENDER_MODE], file)
-			except FileNotFoundError:
-				print("Ошибка записи настроек. Возможно вы удалили или переименовали\"settings.dll\".")
-				quit_game()
+			with open('saves/settings.dll', 'wb') as file:
+				dump([Settings.SPAWNRATE, Settings.RENDER_MODE, Settings.BACKGROUND], file)
+			update_background()
 		else:
 			change_render_mode_back()
 	
