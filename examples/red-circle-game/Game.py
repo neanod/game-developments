@@ -9,7 +9,6 @@ import webbrowser
 from pickle import dump, load
 from enemy import Enemy
 
-# TODO: Добавить усложнение со временем
 # TODO: В настройки: громкость музыки, выбор заднего фона(выпадающее меню)
 
 """
@@ -333,7 +332,7 @@ def main():
 				ButtonsInfo.S = False
 				ButtonsInfo.D = False
 			"""enemy spawn"""
-			if t % (Settings.FPS // Settings.SPAWNRATE) == 0:
+			if t % (Settings.FPS // (Settings.SPAWNRATE + (t/Settings.FPS/60))) == 0:
 				Enemies.enemy_list.append(Enemy(get_random_spawn_pos))
 			"""RENDER"""
 			draw_background()

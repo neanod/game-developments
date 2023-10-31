@@ -11,14 +11,13 @@ class Enemy:
 		self.x, self.y = random_pos_function()
 		self.speed_dia = speed_dia
 		self.speed = 0
-		self.angle = 0
+		from random import randint
+		self.angle = randint(0, 31415926535898 * 2) / 10000000000000
 		self.hp = hp
 	
 	def do_moving(self, target_pos: list[int, int]):
 		dist_to_target = dist([self.x, self.y], target_pos)
-		if dist_to_target <= self.speed_dia[1]:
-			pass
-		else:
+		if dist_to_target > self.speed_dia[1]:
 			self.speed = (atan(dist_to_target) / pi + 0.5) * (self.speed_dia[1] - self.speed_dia[0]) + self.speed_dia[0]
 			"""
 			self.speed вычисляется по принципу:
@@ -27,7 +26,7 @@ class Enemy:
 			target_angle = -atan2(self.y - target_pos[1], self.x - target_pos[0]) + pi * 0.5
 			angle_r = self.angle - target_angle
 			rotate_speed = 0.04
-			if abs(angle_r) > rotate_speed * 2:
+			if abs(angle_r) > rotate_speed * 4:
 				if angle_r % (2 * pi) < -angle_r % (2 * pi):
 					# left
 					self.angle -= rotate_speed
