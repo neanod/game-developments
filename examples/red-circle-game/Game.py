@@ -9,7 +9,7 @@ import webbrowser
 from pickle import dump, load
 from enemy import Enemy
 
-# TODO: В настройки: громкость музыки, выбор заднего фона(выпадающее меню)
+# TODO: В настройки: громкость музыки
 # TODO: Добавить ачивки
 
 """

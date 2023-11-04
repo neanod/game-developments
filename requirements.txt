@@ -1,5 +1,6 @@
-Pillow
-rembg
-pygame
-openai
-g4f
+Pillow~=10.0.1
+rembg~=2.0.51
+pygame~=2.5.2
+openai~=0.28.1
+g4f~=0.1.7.9
+numpy~=1.26.1
