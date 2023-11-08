@@ -6,4 +6,3 @@ g4f
 numpy
 pydub
 ffmpeg
-// ffmpeg ДОЛЖЕН быть прописан в PATH
