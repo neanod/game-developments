@@ -1,28 +1,72 @@
+import time
 import openai
 import gpt_token
-
 
 openai.api_key = gpt_token.token()
 
 messages = []
 
-while True:
-	content = input("User: ")
-	match content:
-		case '/clear':
-			messages = []
-			continue
-		case '':
-			continue
-		case _:
-			messages.append({"role": "user", "content": content})
-			
-			completion = openai.ChatCompletion.create(
-				model="gpt-3.5-turbo",
-				messages=messages,
-			)
-			
-			chat_response = completion.choices[0].message.content
-			print(f'ChatGPT: {chat_response}')
-			# print(f"{messages=}")
-			messages.append({"role": "assistant", "content": chat_response})
+
+class GPT:
+	def __init__(self, assist=None, model=None):
+		if assist is None:
+			self.assist_text = "You are helpful bot"
+		else:
+			self.assist_text = assist
+		if model is None:
+			self.model = 'gpt-3.5-turbo'
+		else:
+			self.model = model
+		self.message_history = [
+			{
+				"role": "system",
+				"content": self.assist_text
+			}
+		]
+	
+	def get_response(self, _text, retry=True):
+		# enter the message
+		self.message_history.append(
+			{
+				"role": "user",
+				"content": _text,
+			}
+		)
+		# get response
+		if retry:
+			try:
+				completion = openai.chat.completions.create(
+					model=self.model,
+					messages=self.message_history,
+				)
+			except openai.RateLimitError:
+				time.sleep(5)
+				print("Rate Limit exhausted. Retrying")
+		else:
+			try:
+				completion = openai.chat.completions.create(
+					model=self.model,
+					messages=self.message_history,
+				)
+			except openai.RateLimitError:
+				self.message_history.pop(-1)
+				return None
+		response = completion.choices[0].message.content
+		self.message_history.append(
+			{
+				"role": "assistant",
+				"content": response,
+			}
+		)
+		return response
+
+
+def main():
+	GPT35 = GPT(assist="Ты пират который может говорить только как пират и часто говорит йохохо")
+	
+	while True:
+		print(f"{GPT35.get_response(input('USER:'))}")
+
+
+if __name__ == '__main__':
+	main()

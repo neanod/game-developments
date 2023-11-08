@@ -552,7 +552,7 @@ def main():
 			for button in buttons_creators:
 				button.draw()
 			
-			pg.display.update(Settings.SETTINGS_BOX_SIZE)
+			pg.display.update()
 	
 	def settings_menu(dark_screen=True):
 		if dark_screen:

@@ -13,9 +13,9 @@ from pygame import Surface, SurfaceType
 def main():
 	pg.init()
 	
-	def find_path():
-		start_pos = SelectedInfo.RMB_POS
-		end_pos = SelectedInfo.LMB_POS
+	def find_path(start_pos, end_pos):
+		# start_pos = SelectedInfo.RMB_POS
+		# end_pos = SelectedInfo.LMB_POS
 		
 		old_points = list()
 		
@@ -50,6 +50,7 @@ def main():
 			]
 			"""
 			"""
+			# быстрая версия
 			way_matrix = [
 				[0, 1],
 				[1, 0],
@@ -113,14 +114,6 @@ def main():
 	
 	sc: Surface | SurfaceType = pg.display.set_mode(Sets.Sc.res)
 	pg.display.set_caption("тесты с графами")
-	
-	def clamp_color_channel(_x) -> int:
-		return max(0, min(255, _x))
-	
-	def world_post_gen(x, z):
-		noise = Sets.noise
-		
-		y = floor((noise([x / Sets.period, z / Sets.period]) + 0.5) * Sets.amp)
 	
 	def world_gen(size_x, size_z) -> list[list[int]]:
 		"""
@@ -325,7 +318,7 @@ def main():
 		path = []
 	
 	def update_path():
-		Path.path = find_path()
+		Path.path = find_path(SelectedInfo.RMB_POS, SelectedInfo.LMB_POS)
 	
 	def game():
 		running = True
