@@ -10,4 +10,4 @@ def speech_to_text(audio_file):
 		model="whisper-1",
 		file=audio_file
 	)
-	return transcript
+	return transcript.text

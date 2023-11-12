@@ -3,11 +3,13 @@ import subprocess
 import webbrowser
 import openai
 import tldextract
-from gpt_instruments import GPT
-from speech_tools.text_to_speech import stream_and_play
-from speech_tools.speech_to_text import speech_to_text
-from speech_tools.audio_get import get_audio
+from selenium import webdriver
 from keyboard import is_pressed
+from gpt_instruments import GPT
+from speech_tools.alternate_speech_to_text import speech_to_text as alternate_speech_to_text
+from speech_tools.speech_to_text import speech_to_text
+from speech_tools.text_to_speech import stream_and_play
+from speech_tools.audio_get import get_audio
 
 
 class Settings:
@@ -31,13 +33,22 @@ def generate_random_filename():
 		.replace('9', 'g') + '.txt'
 
 
+def restart():
+	print("Restarting...")
+	subprocess.call(["C:\\my_works\\pythonProjects\\game-dev-with-git\\venv\\Scripts\\python.exe", "jarvis.py"])
+
+
+decode_function = speech_to_text
+browser = webdriver.Chrome()
+
+
 class CmdCommand:
 	def __init__(self, text, output):
 		self.text = text
 		self.output = output
-	
 
-def remove_code_in_response(_text) -> str:
+
+def upgrade_response(_text) -> str:
 	result = str()
 	text = _text.split('```')
 	cmd_returns = str()
@@ -57,7 +68,11 @@ def remove_code_in_response(_text) -> str:
 						webbrowser.open(string)
 					else:
 						to_search = '+'.join(string.split(" "))
-						webbrowser.open(f'https://yandex.ru/search/?clid=2285101&text={to_search}')
+						try:
+							browser.get(url=f'https://yandex.ru/search/?clid=2285101&text={to_search}')
+						except Exception as e:
+							print(f"ПРОБЛЕМА С ОТКРЫТИЕМ URL:\n{e}")
+		
 		else:
 			if not Settings.smart_file_name:
 				filename = generate_random_filename()
@@ -96,46 +111,45 @@ def remove_code_in_response(_text) -> str:
 				cmd_returns += subprocess.run(com.text, shell=True, capture_output=True, text=True).stdout + '\n'
 			except Exception as e:
 				print(f"ОШИБКА ПРИ ВЫПОЛНЕНИИ В CMD:\n{e}")
-				
 	
+	result = result.replace('BROWS ', "Открыл в браузере: ")
 	return result
 
 
 def main():
-	JARVIS = GPT(assist="You are Jarvis, you answer ONLY IN RUSSIAN"
-	                    f"Everything you doing in console you must do in {Settings.jarvis_works_path}"
-	                    "If I ask you to turn off, restart, etc., you respond with a word\"0FFX2\""
-	                    "If I ask you to do something that requires a console, you can execute commands in cmd by writing in response CMD_P YOUR_COMMAND1 && YOUR_COMMAND2 ..."
-	                    "if you want to print result or CMD_N YOUR_COMMAND1 && YOUR_COMMAND2 ... if you not"
-	                    "You must write ALL cmd commands in 1 string"
-	                    "If you cannot use internet, you can write BROWS URL_OR_SEARCH_REQUEST"
-	             # "If I say \"Open the input interface for me\" you answer with the word \"X012B\""
+	JARVIS = GPT(assist="You are Jarvis, you answer ONLY IN RUSSIAN\n"
+	                    f"Everything you doing in console you must do in {Settings.jarvis_works_path}\n"
+	                    "If I ask you to turn off, restart, etc., you respond \"0FFX2\"\n"
+	                    "If I ask you to do something that requires a console, you can execute commands in cmd by writing in response CMD_P YOUR_COMMAND1 && YOUR_COMMAND2 ...\n"
+	                    "if you want to print result or CMD_N YOUR_COMMAND1 && YOUR_COMMAND2 ... if you not\n"
+	                    "You must write ALL cmd commands in 1 string\n"
+	                    "If you cannot use internet, you can write BROWS URL_OR_SEARCH_REQUEST you must write BROWS ... in single string\n"
+	                    "If I say \"Please, restart yourself\" you answer \"X012B\"\n"
 	             )
 	
 	while True:
 		while True:
 			if is_pressed(Settings.secret_key):
-				print(f"NEANOD:"
-				      f"{(prompt := speech_to_text(get_audio('f13')).text)}")
+				print(f"NEANOD:\n"
+				      f"{(prompt := decode_function(get_audio('f13')))}")
 				try:
 					response = JARVIS.get_response(prompt)
 				except openai.APIConnectionError:
 					response = "Кажется у вас проблемы с подключением. Настоятельно рекомендую проверить интернет."
-					print(f"JARVIS:"
+					print(f"JARVIS:\n"
 					      f"{response}")
 					break
 				if "0FFX2" in response:
+					browser.quit()
 					quit(1)
-					"""
+				
 				if "X012B" in response:
-					prompt = input("-----------\nMANUAL_INPUT\n--------\n>>>")
-					JARVIS.message_history.pop(-1)
-					JARVIS.message_history.pop(-1)
-					response = JARVIS.get_response(prompt)
-				"""
+					browser.quit()
+					restart()
+				
 				print(f"JARVIS:"
 				      f"{response}")
-				stream_and_play(remove_code_in_response(response))
+				stream_and_play(upgrade_response(response))
 				break
 			elif is_pressed(Settings.clear_key) and len(JARVIS.message_history) != 1:
 				JARVIS.clear_history()
@@ -145,6 +159,7 @@ def main():
 				while is_pressed(Settings.clear_key):
 					pass
 				break
+	browser.quit()
 
 
 if __name__ == '__main__':
