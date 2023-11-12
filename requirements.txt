@@ -6,3 +6,6 @@ g4f
 numpy
 pydub
 ffmpeg
+pyaudio
+keyboard
+tldextract

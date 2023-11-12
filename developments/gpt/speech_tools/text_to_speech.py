@@ -6,10 +6,10 @@ from pydub.playback import play
 client = OpenAI(api_key="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")
 
 
-def stream_and_play(text: str):
+def stream_and_play(text: str, voice="alloy"):
 	response = client.audio.speech.create(
 		model="tts-1",
-		voice="alloy",
+		voice=voice,
 		input=text,
 	)
 	
@@ -24,5 +24,4 @@ def stream_and_play(text: str):
 
 
 if __name__ == "__main__":
-	# stream_and_play(input("Enter text: "))
-	stream_and_play("Привет мир. Этот текст генерируется с помощью нейросетей.")
+	stream_and_play(input("Enter text: "))

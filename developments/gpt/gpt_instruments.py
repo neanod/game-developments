@@ -21,8 +21,16 @@ class GPT:
 				"content": self.assist_text
 			}
 		]
+		
+	def clear_history(self) -> None:
+		self.message_history = [
+			{
+				"role": "system",
+				"content": self.assist_text
+			}
+		]
 	
-	def get_response(self, _text, retry=True, limit=None):
+	def get_response(self, _text, retry=True, limit=None) -> str:
 		# enter the message
 		self.message_history.append(
 			{
@@ -52,7 +60,7 @@ class GPT:
 			except openai.RateLimitError:
 				self.message_history.pop(-1)
 				return None
-		response = completion.choices[0].message.content
+		response: str = completion.choices[0].message.content
 		self.message_history.append(
 			{
 				"role": "assistant",
