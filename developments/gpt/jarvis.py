@@ -181,8 +181,6 @@ class Jarvis(GPT):
 			else:
 				return []
 		
-		# Ваш API-ключ и CX (идентификатор поисковой выдачи)
-		
 		return google_search(search_query)
 	
 	def get_upgraded_response(self, text):

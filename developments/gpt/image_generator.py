@@ -18,8 +18,9 @@ def generate(prompt: str) -> list[str, str]:
 	except openai.RateLimitError:
 		print("Image-gen rate limit exceeded.")
 		return ["IMAGE-GEN: Can't generate images", "Because Rate-limit"]
-	# except openai.InvalidRequestError:
-	# 	print("Неприемлемый запрос рисунка")
+	except openai.BadRequestError:
+		print("Bad request")
+		return ["IMAGE-GEN: Can't generate images", "Because Bad request"]
 	
 	return [response.data[0].url, response.data[0].revised_prompt]
 

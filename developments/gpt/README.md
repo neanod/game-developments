@@ -1,9 +1,12 @@
-# chat gpt 3.5
-<h3>How to set up</h3>
-To set up, create file "token.txt" and place you apenai token in gpt/token.txt
-<h3>How to open</h3>
-To start chatting with bot, open file "online-model.py"
-<h3>How to use</h3>
-You can delete chat context using /clear
-<h3>Creators</h3>
+# JARVIS
+<h1>Models</h1>
+<h2>Jarvis</h2>
+<h3>Possibilities</h3>
+*image-gen<br>
+*automatic internet search
+*intellect based on gpt 3.5 turbo / 3.5 turbo 16 k
+<h2>Other models</h2>
+online-model.py - gpt 3.5<br>
+image_generator.py - dalle-3<br>
+<h1>Creators</h1>
 ><a href = "https://github.com/azaz-azaz"> Neanod </a><br>
