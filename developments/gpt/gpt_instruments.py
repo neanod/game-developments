@@ -1,8 +1,8 @@
 import time
 import openai
-import gpt_token
+import get_token
 
-openai.api_key = gpt_token.token()
+openai.api_key = get_token.gpt_token()
 
 
 class GPT:
@@ -30,7 +30,7 @@ class GPT:
 			}
 		]
 	
-	def get_response(self, _text, retry=True, limit=None) -> str:
+	def get_response(self, _text, retry=True, limit=None, timeout=60) -> str:
 		# enter the message
 		self.message_history.append(
 			{
@@ -46,11 +46,25 @@ class GPT:
 						model=self.model,
 						messages=self.message_history,
 						max_tokens=limit,
+						timeout=timeout,
 					)
 					break
-				except openai.RateLimitError:
-					time.sleep(5)
-					# print("Rate Limit exhausted. Retrying")
+				except openai.RateLimitError as e:
+					time.sleep(20)
+					print("\tRate Limit exhausted. Retrying")
+					if "Request too large" in str(e):
+						completion = {
+							"role": "system",
+							"content": "NO_INFORMATION - too long request",
+						}
+						break
+						
+				except openai.BadRequestError:
+					completion = {
+						"role": "system",
+						"content": "NO_INFORMATION - too long request",
+					}
+					break
 		else:
 			try:
 				completion = openai.chat.completions.create(
@@ -60,7 +74,10 @@ class GPT:
 			except openai.RateLimitError:
 				self.message_history.pop(-1)
 				return None
-		response: str = completion.choices[0].message.content
+		try:
+			response: str = completion.choices[0].message.content
+		except AttributeError:
+			response = completion['content']
 		self.message_history.append(
 			{
 				"role": "assistant",
@@ -68,4 +85,3 @@ class GPT:
 			}
 		)
 		return response
-

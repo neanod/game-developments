@@ -9,3 +9,5 @@ ffmpeg
 pyaudio
 keyboard
 tldextract
+selenium
+requests
