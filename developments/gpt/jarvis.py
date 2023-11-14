@@ -22,13 +22,14 @@ class Settings:
 	jarvis_works_path = 'C:\\jarvis_works\\'
 	secret_key = 'f13'
 	clear_key = 'f8'
-	smart_file_name = True
 	use_PARVIS = True
 	cx = "8255d5ccd353d4ae2"
 	g_token = google_token()
+	use_voice = False
 	
 	# debug
 	show_throw_gpt_messenger = False
+	smart_file_name = True
 
 
 def generate_random_filename():
@@ -242,12 +243,14 @@ class Jarvis(GPT):
 	
 	@staticmethod
 	def play_response(response) -> None:
-		if response.replace(' ', str()):
+		if response.replace(' ', str()) and Settings.use_voice:
 			stream_and_play(response)
 
 
 def main():
 	JARVIS = Jarvis(assist="You are Jarvis, you answer ONLY IN RUSSIAN\n"
+	                       
+	                       "YOU CAN DRAW OR GENERATE IMAGES BY WRITING GENERATE prompt\n"
 	                       
 	                       f"Everything you doing in console you must do in {Settings.jarvis_works_path}\n"
 	                       
@@ -263,15 +266,16 @@ def main():
 	                       "If you cannot use internet, you can write BROWS URL_OR_SEARCH_REQUEST you must write BROWS "
 	                       "... in single string\n"
 	                       
-	                       "YOU CAN DRAW IMAGES, writing GENERATE (prompt)\n"
-	                       
 	                       "If I say \"Please, restart yourself\" you answer \"X012B\"\n")
 	print('\n'*3+'JARVIS MODEL STARTED\n')
 	while True:
 		while True:
 			if is_pressed(Settings.secret_key):
-				print(f"NEANOD:\n"
-				      f"{(prompt := decode_function(get_audio('f13')))}")
+				if Settings.use_voice:
+					print(f"NEANOD:\n"
+					      f"{(prompt := decode_function(get_audio('f13')))}")
+				else:
+					prompt = input("NEANOD: ")
 				try:
 					response = JARVIS.get_upgraded_response(prompt)
 					if not response:
