@@ -156,13 +156,15 @@ def get_clicked():
 def draw_path(sc):
 	if Path.path:
 		path = [[(x[0] + 0.5) * Sets.square_size, (x[1] + 0.5) * Sets.square_size] for x in Path.path]
-		pg.draw.lines(
-			surface=sc,
-			color=(255, 255, 255),
-			closed=False,
-			points=path,
-			width=10,
-		)
+		
+		if len(path) - 1:
+			pg.draw.lines(
+				surface=sc,
+				color=(255, 255, 255),
+				closed=False,
+				points=path,
+				width=10,
+			)
 
 
 class Path:
@@ -170,4 +172,5 @@ class Path:
 
 
 def update_path():
-	Path.path = find_path(SelectedInfo.RMB_POS, SelectedInfo.LMB_POS, WorldMap.land_map)
+	if SelectedInfo.LMB_POS and SelectedInfo.RMB_POS:
+		Path.path = find_path_a_star(SelectedInfo.RMB_POS, SelectedInfo.LMB_POS, WorldMap.land_map)

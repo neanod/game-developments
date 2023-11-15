@@ -13,7 +13,9 @@ class Sets:
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
 	square_size: int = 10
 	matching = True
-	noise = PerlinNoise(octaves=6, seed=randint(1000, 1000000))
+	
+	noise = PerlinNoise(octaves=12, seed=randint(1000, 1000000))
+	#noise = PerlinNoise(octaves=6, seed=randint(1000, 1000000))
 	
 	class Sc:
 		res: list[int] = [1920, 1080]
@@ -25,6 +27,7 @@ class Sets:
 	
 	amp = 1.6
 	period = 2500 / square_size
+
 
 class SelectedInfo:
 	LMB_POS = None

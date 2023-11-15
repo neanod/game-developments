@@ -1,5 +1,6 @@
 from sets import Sets
 from numpy import floor
+import heapq
 
 
 def find_path(start_pos, end_pos, world_map):
@@ -62,7 +63,6 @@ def find_path(start_pos, end_pos, world_map):
 		while True:
 			new_paths: list[list[list[int, int]]] = list()
 			
-			i = 0
 			path: list[list[int, int]]
 			
 			for path in all_paths:
@@ -85,10 +85,59 @@ def find_path(start_pos, end_pos, world_map):
 					new_paths.append(new_path)
 					if current_possible_pos == end_pos:
 						return path + [current_possible_pos]
-				i += 1
 			all_paths = new_paths
 			if not new_paths:
 				return None
+
+
+def heuristic_cost_estimate(pos, goal):
+	# Пример эвристической функции (можете настроить под вашу задачу)
+	return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+
+
+def find_path_a_star(start_pos, end_pos, world_map):
+	start_pos = tuple(start_pos)
+	end_pos = tuple(end_pos)
+	
+	open_set = [(0, start_pos)]
+	came_from = {start_pos: None}
+	g_score = {start_pos: 0}
+	
+	while open_set:
+		current_g, current_pos = heapq.heappop(open_set)
+		
+		if current_pos == end_pos:
+			path = reconstruct_path(came_from, end_pos)
+			return path
+		
+		for delta_pos in [
+			(1, 0), (0, 1), (-1, 0), (0, -1),
+			(1, 1), (1, -1), (-1, 1), (-1, -1)
+		]:
+			neighbor = (current_pos[0] + delta_pos[0], current_pos[1] + delta_pos[1])
+			
+			if (
+					0 <= neighbor[0] < len(world_map)
+					and 0 <= neighbor[1] < len(world_map[0])
+					and world_map[neighbor[0]][neighbor[1]]
+			):
+				tentative_g = g_score[current_pos] + 1
+				
+				if neighbor not in g_score or tentative_g < g_score[neighbor]:
+					g_score[neighbor] = tentative_g
+					f_score = tentative_g + heuristic_cost_estimate(neighbor, end_pos)
+					heapq.heappush(open_set, (f_score, neighbor))
+					came_from[neighbor] = current_pos
+	
+	return None
+
+
+def reconstruct_path(came_from, current_pos):
+	path = [current_pos]
+	while current_pos in came_from and came_from[current_pos] is not None:
+		current_pos = came_from[current_pos]
+		path.insert(0, current_pos)
+	return path
 
 
 def clamp_color_channel(_x) -> int:

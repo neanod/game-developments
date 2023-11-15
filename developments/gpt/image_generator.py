@@ -14,6 +14,7 @@ def generate(prompt: str) -> list[str, str]:
 			model="dall-e-3",
 			size="1792x1024",
 			response_format="url",
+			style="vivid",
 		)
 	except openai.RateLimitError:
 		print("Image-gen rate limit exceeded.")

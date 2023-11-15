@@ -2,6 +2,10 @@ from pygame import Surface, SurfaceType
 from render import *
 
 
+class Camera:
+	pos = [0, 0]
+
+
 def exit_game():
 	pg.quit()
 	quit(0)
