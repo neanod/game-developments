@@ -1,6 +1,5 @@
 from sets import Sets
 import pygame as pg
-from render import ButtonsInfo
 
 
 def clamp(_x, _min, _max):
@@ -21,28 +20,10 @@ def sum_list(m: list[list]) -> list:
 
 
 def get_camera_offset(camera_pos):
-	return [camera_pos[0] - Sets.Sc.h_width, camera_pos[1] - Sets.Sc.h_height]
+	return camera_pos[0] - Sets.Sc.h_width, camera_pos[1] - Sets.Sc.h_height
 
 
 def exit_game():
 	pg.quit()
 	quit(0)
 
-
-def get_pressed():
-	for event in pg.event.get():
-		match event.type:
-			case pg.QUIT:
-				exit_game()
-			case pg.MOUSEBUTTONDOWN:
-				match event.button:
-					case 1:
-						ButtonsInfo.LMB = True
-					case 3:
-						ButtonsInfo.RMB = True
-			case pg.MOUSEBUTTONUP:
-				match event.button:
-					case 1:
-						ButtonsInfo.LMB = False
-					case 3:
-						ButtonsInfo.RMB = False

@@ -1,7 +1,26 @@
 from sets import SelectedInfo, ButtonsInfo, Sets
 from world import WorldMap, find_path_a_star
-from matan import get_clicked_rectangle
+from matan import get_clicked_rectangle, exit_game
 import pygame as pg
+
+
+def get_pressed():
+	for event in pg.event.get():
+		match event.type:
+			case pg.QUIT:
+				exit_game()
+			case pg.MOUSEBUTTONDOWN:
+				match event.button:
+					case 1:
+						ButtonsInfo.LMB = True
+					case 3:
+						ButtonsInfo.RMB = True
+			case pg.MOUSEBUTTONUP:
+				match event.button:
+					case 1:
+						ButtonsInfo.LMB = False
+					case 3:
+						ButtonsInfo.RMB = False
 
 
 def render_world(sc, offset):
@@ -10,119 +29,76 @@ def render_world(sc, offset):
 	:type offset: list[int, int] | tuple[int, int]
 	"""
 	
+	offset = list(offset)
+	offset = -offset[0], -offset[1]
+	
 	sc.fill((0, 0, 120))
 	color = 0, 155, 0
-	block_offset = [-offset[0] // Sets.square_size, -offset[1] // Sets.square_size]
-	for x in range(block_offset[0], WorldMap.size[0] + block_offset[0] + 1):
+	block_offset: list[int, int] = [int(-offset[0] // Sets.square_size), int(-offset[1] // Sets.square_size)]
+	for x in range(block_offset[0], WorldMap.size[0] + 1 + block_offset[0]):
 		for z in range(block_offset[1], WorldMap.size[1] + block_offset[1] + 1):
+			rect = [
+				x * Sets.square_size + offset[0],
+				z * Sets.square_size + offset[1],
+				Sets.square_size,
+				Sets.square_size,
+			]
+			if (x, z) not in WorldMap.land_map.keys():
+				pg.draw.rect(sc, (0, 0, 0), rect, 10)
+				continue
+			if not WorldMap.land_map[x, z]:
+				continue
+			neighbours = list()  # [top, right, bottom, left]
+			
+			default_value = False
+			radius = Sets.square_size // 3
+			
+			try:
+				neighbours.append(WorldMap.land_map[x, z - 1])
+			except KeyError:
+				neighbours.append(default_value)
+			try:
+				neighbours.append(WorldMap.land_map[x + 1, z])
+			except KeyError:
+				neighbours.append(default_value)
+			try:
+				neighbours.append(WorldMap.land_map[x, z + 1])
+			except KeyError:
+				neighbours.append(default_value)
+			try:
+				neighbours.append(WorldMap.land_map[x - 1, z])
+			except KeyError:
+				neighbours.append(default_value)
+			
 			if (x, z) in WorldMap.land_map.keys():
-				if not WorldMap.land_map[x, z]:
-					continue
-				neighbours = list()  # [top, right, bottom, left]
-				
-				default_value = False
-				radius = Sets.square_size // 3
-				
-				try:
-					neighbours.append(WorldMap.land_map[x, z - 1])
-				except KeyError:
-					neighbours.append(default_value)
-				try:
-					neighbours.append(WorldMap.land_map[x + 1, z])
-				except KeyError:
-					neighbours.append(default_value)
-				try:
-					neighbours.append(WorldMap.land_map[x, z + 1])
-				except KeyError:
-					neighbours.append(default_value)
-				try:
-					neighbours.append(WorldMap.land_map[x - 1, z])
-				except KeyError:
-					neighbours.append(default_value)
-				
-				if (x, z) in WorldMap.land_map.keys():
-					if Sets.matching:
-						match neighbours:
-							case [False, False, False, False]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_radius=radius)
-							
-							case [False, False, False, True]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_top_right_radius=radius, border_bottom_right_radius=radius)
-							case [False, False, True, False]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_top_right_radius=radius, border_top_left_radius=radius)
-							case [False, True, False, False]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_top_left_radius=radius, border_bottom_left_radius=radius)
-							case [True, False, False, False]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_bottom_left_radius=radius, border_bottom_right_radius=radius)
-							
-							case [False, False, True, True]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_top_right_radius=radius)
-							case [False, True, True, False]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_top_left_radius=radius)
-							case [True, True, False, False]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_bottom_left_radius=radius)
-							case [True, False, False, True]:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], border_bottom_right_radius=radius)
-							
-							case _:
-								pg.draw.rect(sc, color, [
-									x * Sets.square_size + offset[0],
-									z * Sets.square_size + offset[1],
-									Sets.square_size,
-									Sets.square_size,
-								], )
-					else:
-						pg.draw.rect(sc, color, [
-							x * Sets.square_size + offset[0],
-							z * Sets.square_size + offset[1],
-							Sets.square_size,
-							Sets.square_size,
-						], )
+				if Sets.matching:
+					offset = list(offset)
+					match neighbours:
+						case [False, False, False, False]:
+							pg.draw.rect(sc, color, rect, border_radius=radius)
+						
+						case [False, False, False, True]:
+							pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_bottom_right_radius=radius)
+						case [False, False, True, False]:
+							pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_top_left_radius=radius)
+						case [False, True, False, False]:
+							pg.draw.rect(sc, color, rect, border_top_left_radius=radius, border_bottom_left_radius=radius)
+						case [True, False, False, False]:
+							pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius, border_bottom_right_radius=radius)
+						
+						case [False, False, True, True]:
+							pg.draw.rect(sc, color, rect, border_top_right_radius=radius)
+						case [False, True, True, False]:
+							pg.draw.rect(sc, color, rect, border_top_left_radius=radius)
+						case [True, True, False, False]:
+							pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius)
+						case [True, False, False, True]:
+							pg.draw.rect(sc, color, rect, border_bottom_right_radius=radius)
+						
+						case _:
+							pg.draw.rect(sc, color, rect)
+				else:
+					pg.draw.rect(sc, color, rect)
 
 
 def render_selected_rect(pos, color, sc, offset):
@@ -166,7 +142,8 @@ def get_clicked(offset):
 
 def draw_path(sc, offset):
 	if Path.path:
-		path = [[(x[0] + 0.5) * Sets.square_size + offset[0], (x[1] + 0.5) * Sets.square_size + offset[1]] for x in Path.path]
+		path = [[(x[0] + 0.5) * Sets.square_size + offset[0], (x[1] + 0.5) * Sets.square_size + offset[1]] for x in
+		        Path.path]
 		
 		if len(path) - 1:
 			pg.draw.lines(

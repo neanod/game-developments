@@ -12,26 +12,26 @@ class ButtonsInfo:
 class Sets:
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
-	square_size: int = 20
+	square_size: int = 12
 	matching = True
 	
-	gen_dist = 3
-	noise = PerlinNoise(octaves=10, seed=randint(1000, 1000000))
-	amp = 1.6
-	period = 2500 / square_size
+	spawn_zone = 6
 	
-	# noise = PerlinNoise(octaves=6, seed=randint(1000, 1000000))
+	gen_dist = 3
+	noise = PerlinNoise(octaves=5, seed=randint(10000, 1000000))
+	amp = 1.6
+	period = 1500 / square_size
 	
 	class Sc:
-		res: list[int] = [1920, 1080]
+		res: list[int] = [1920 - 200, 1080 - 200]
 		width: int = res[0]
 		height: int = res[1]
 		h_width: int = width // 2
 		h_height: int = height // 2
 		center: list[int] = [h_width, h_height]
 		
-		cam_to_player_box_size = [500, 250]
-		cam_to_player_box = pg.Rect(
+		cam_to_player_box_size = [400, 200]
+		cam_to_player_box: pg.Rect = pg.Rect(
 			[
 				h_width - cam_to_player_box_size[0] * 0.5,
 				h_height - cam_to_player_box_size[1] * 0.5,

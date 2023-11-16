@@ -1,6 +1,7 @@
 from math import sqrt
 
 from sets import Sets
+from pygame import draw, Surface
 
 
 class Player:
@@ -22,17 +23,13 @@ class Player:
 		if facing is None:
 			facing = 'up'
 		self.color = color
-		self.pos = [int(x), int(y)]
+		self.x, self.y = [int(x), int(y)]
 		self.speed = speed
 		self.facing = facing
 	
 	@property
-	def x(self) -> int:
-		return self.pos[0]
-	
-	@property
-	def y(self) -> int:
-		return self.pos[1]
+	def pos(self) -> list[int, int]:
+		return [self.x, self.y]
 	
 	@property
 	def speed_x(self):
@@ -53,7 +50,7 @@ class Player:
 				return -self.speed
 			case 'up-left':
 				return -self.speed * 0.5 * sqrt(2)
-		
+	
 	@property
 	def speed_y(self):
 		match self.facing:
@@ -73,12 +70,23 @@ class Player:
 				return 0
 			case 'up-left':
 				return -self.speed * 0.5 * sqrt(2)
-		
+	
 	@property
 	def speed_dim(self):
 		return self.speed_x, self.speed_y
-				
 	
+	def render(self, sc: Surface, offset):
+		draw.circle(
+			sc,
+			self.color,
+			[
+				self.x - offset[0],
+				self.y - offset[1],
+			],
+			Sets.square_size
+		)
+
+
 def main():
 	input("Этот файл не предназначен для запуска")
 
