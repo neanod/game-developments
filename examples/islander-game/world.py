@@ -1,6 +1,12 @@
+import math
 from sets import Sets
 from numpy import floor
 import heapq
+from matan import clamp
+
+
+class Camera:
+	pos = Sets.Sc.center.copy()
 
 
 def find_path(start_pos, end_pos, world_map):
@@ -91,11 +97,58 @@ def find_path(start_pos, end_pos, world_map):
 
 
 def heuristic_cost_estimate(pos, goal):
-	# Пример эвристической функции (можете настроить под вашу задачу)
-	return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+	x1, y1 = pos
+	x2, y2 = goal
+	n = 2
+	return (abs(x1 - x2) ** n + abs(y1 - y2) ** n) ** (1 / n)
+
+
+def camera_logic(camera_pos, player_pos, t):
+	"""
+	:type t: int
+	:type camera_pos: list[int, int]
+	:type player_pos: list[int, int]
+	:return None
+	"""
+	
+	camera_pos_clamped: list = [
+		clamp(
+			camera_pos[0],
+			player_pos[0] - Sets.Sc.cam_to_player_box_size[0] // 2,
+			player_pos[0] + Sets.Sc.cam_to_player_box_size[0] // 2,
+		),
+		clamp(
+			camera_pos[0],
+			player_pos[1] - Sets.Sc.cam_to_player_box_size[1] // 2,
+			player_pos[1] + Sets.Sc.cam_to_player_box_size[1] // 2,
+		)
+	]
+	
+	# world_generation
+	camera_offset = camera_pos_clamped[0] - Sets.Sc.h_width, camera_pos_clamped[1] - Sets.Sc.h_height
+	
+	if t % (Sets.FPS // 4):
+		return
+	
+	gen_size_x, gen_size_y = Sets.Sc.width // Sets.square_size + Sets.gen_dist * 2, Sets.Sc.height // Sets.square_size + Sets.gen_dist * 2
+	left = -camera_offset[0] // Sets.square_size - Sets.gen_dist
+	top = -camera_offset[1] // Sets.square_size - Sets.gen_dist
+	world_keys = WorldMap.land_map.keys()
+	
+	for x in range(left - 1, left + gen_size_x + 1):
+		for z in range(top - 1, top + gen_size_y + 1):
+			if (x, z) in world_keys:
+				continue
+			world_post_gen(x, z)
+	return
 
 
 def find_path_a_star(start_pos, end_pos, world_map):
+	"""
+	:type end_pos: list | tuple
+	:type start_pos: list | tuple
+	:type world_map: dict[tuple[int, int], bool]
+	"""
 	start_pos = tuple(start_pos)
 	end_pos = tuple(end_pos)
 	
@@ -112,22 +165,24 @@ def find_path_a_star(start_pos, end_pos, world_map):
 		
 		for delta_pos in [
 			(1, 0), (0, 1), (-1, 0), (0, -1),
-			(1, 1), (1, -1), (-1, 1), (-1, -1)
+			(1, 1), (1, -1), (-1, 1), (-1, -1),
+			
+			# (-1, 2), (0, 2), (1, 2), (2, 2),
+			# (-2, -2), (0, -2), (1, -2), (1, -2),
+			# (2, 1), (2, 0), (2, -1), (2, -2),
+			# (-2, 2), (-2, 1), (-2, 0), (-2, -1),
 		]:
 			neighbor = (current_pos[0] + delta_pos[0], current_pos[1] + delta_pos[1])
 			
-			if (
-					0 <= neighbor[0] < len(world_map)
-					and 0 <= neighbor[1] < len(world_map[0])
-					and world_map[neighbor[0]][neighbor[1]]
-			):
-				tentative_g = g_score[current_pos] + 1
-				
-				if neighbor not in g_score or tentative_g < g_score[neighbor]:
-					g_score[neighbor] = tentative_g
-					f_score = tentative_g + heuristic_cost_estimate(neighbor, end_pos)
-					heapq.heappush(open_set, (f_score, neighbor))
-					came_from[neighbor] = current_pos
+			if neighbor in world_map:
+				if world_map[neighbor]:
+					tentative_g = g_score[current_pos] + 1
+					
+					if neighbor not in g_score or tentative_g < g_score[neighbor]:
+						g_score[neighbor] = tentative_g
+						f_score = tentative_g + heuristic_cost_estimate(neighbor, end_pos)
+						heapq.heappush(open_set, (f_score, neighbor))
+						came_from[neighbor] = current_pos
 	
 	return None
 
@@ -144,13 +199,16 @@ def clamp_color_channel(_x) -> int:
 	return max(0, min(255, _x))
 
 
-def world_post_gen(x, z):
-	noise = Sets.noise
+def world_post_gen(x, z) -> None:
+	"""
+	:type z: int
+	:type x: int
+	"""
 	
-	y = floor((noise([x / Sets.period, z / Sets.period]) + 0.5) * Sets.amp)
+	WorldMap.land_map[(x, z)] = not not int(floor((Sets.noise([x / Sets.period, z / Sets.period]) + 0.5) * Sets.amp))
 
 
-def world_gen(size_x, size_z) -> list[list[int]]:
+def world_gen(size_x, size_z) -> dict:
 	"""
 	:type size_x: int
 	:type size_z: int
@@ -160,7 +218,8 @@ def world_gen(size_x, size_z) -> list[list[int]]:
 	amp = Sets.amp
 	period = Sets.period
 	
-	land_map = [[0 for ix in range(size_z)] for iix in range(size_x)]
+	land_map = [[0 for _ in range(size_z)] for _ in range(size_x)]
+	map_dict: dict = {}
 	
 	for position in range(size_x * size_z * 2 - size_x * 2):
 		# вычисление высоты y в координатах (x, z)
@@ -171,13 +230,26 @@ def world_gen(size_x, size_z) -> list[list[int]]:
 			land_map[int(x_pos)][int(z_pos)] = not not int(y_pos)
 		except IndexError:
 			pass
-	return land_map
+	
+	for x in range(size_x):
+		for z in range(size_z):
+			map_dict[(x, z)] = land_map[x][z]
+	
+	spawn_zone = 150 // Sets.square_size
+	center = Sets.Sc.h_width // Sets.square_size, Sets.Sc.h_height // Sets.square_size
+	for i in range(Sets.Sc.h_width // Sets.square_size - spawn_zone, spawn_zone + Sets.Sc.h_width // Sets.square_size):
+		for j in range(Sets.Sc.h_height // Sets.square_size - spawn_zone,
+		               spawn_zone + Sets.Sc.h_height // Sets.square_size):
+			if math.dist([i, j], center) <= spawn_zone:
+				map_dict[i, j] = True
+	
+	return map_dict
 
 
 class WorldMap:
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
 	# шум Перлина
-	land_map = world_gen(*size)
+	land_map: dict = world_gen(*size)
 
 
 if __name__ == '__main__':

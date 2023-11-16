@@ -1,49 +1,45 @@
 from pygame import Surface, SurfaceType
 from render import *
+from matan import get_camera_offset, get_pressed
+from world import camera_logic, Camera
+from player import Player
 
 
-class Camera:
-	pos = [0, 0]
-
-
-def exit_game():
-	pg.quit()
-	quit(0)
+PLAYER = Player()
 
 
 def main():
 	pg.init()
-	sc: Surface | SurfaceType = pg.display.set_mode(Sets.Sc.res)
-	pg.display.set_caption("Island Capture")
+	sc: Surface | SurfaceType = pg.display.set_mode(Sets.Sc.res, pg.FULLSCREEN)
+	pg.display.set_caption("Island Capture.")
+	clock = pg.time.Clock()
 	
 	def game():
+		"""
+		return None
+		"""
 		running = True
+		t = 0
 		while running:
 			"""LOGIC"""
-			for event in pg.event.get():
-				match event.type:
-					case pg.QUIT:
-						exit_game()
-					case pg.MOUSEBUTTONDOWN:
-						match event.button:
-							case 1:
-								ButtonsInfo.LMB = True
-							case 3:
-								ButtonsInfo.RMB = True
-					case pg.MOUSEBUTTONUP:
-						match event.button:
-							case 1:
-								ButtonsInfo.LMB = False
-							case 3:
-								ButtonsInfo.RMB = False
-			get_clicked()
+			get_pressed()
+			get_clicked(get_camera_offset(Camera.pos))
+			camera_logic(Camera.pos.copy(), PLAYER.pos, t)
+			# TODO
+			"""
+			Определение острова - если окружен водой
+			Спавн врагов - p(A)
+			
+			Нажать R чтобы построить мост
+			"""
 			
 			"""RENDER"""
-			
-			render_world(sc)
-			draw_path(sc)
-			draw_selected(sc)
+			render_world(sc, get_camera_offset(Camera.pos))
+			draw_path(sc, get_camera_offset(Camera.pos))
+			draw_selected(sc, get_camera_offset(Camera.pos))
 			pg.display.update()
+			clock.tick(Sets.FPS)
+			t += 1
 	
 	game()
 

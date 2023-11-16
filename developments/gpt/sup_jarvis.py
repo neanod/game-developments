@@ -204,7 +204,7 @@ class Settings:
 	use_PARVIS = True
 	cx = "8255d5ccd353d4ae2"
 	g_token = google_token()
-	use_voice = True
+	use_voice = False
 	
 	# debug
 	show_throw_gpt_messenger = False
