@@ -1,23 +1,46 @@
-from math import cos
-
-from numpy import sin
 from pygame import Surface, SurfaceType
 from render import *
 from matan import get_camera_offset
-from world import camera_logic, Camera, ToGen, world_post_gen
+from world import camera_logic, Camera, world_post_gen
 from player import Player
 
 PLAYER = Player()
 
 
-def post_gen(gen_per_tick) -> None:
-	"""
-	:return: None
-	"""
-	
-	for i in range(gen_per_tick):
-		world_post_gen(*ToGen.al[i])
+post_gen = lambda gen_per_tick: [world_post_gen(*WorldMap.to_gen[i]) for i in range(gen_per_tick)]
 
+
+def pressed_logic():
+	pressed_num_wasd = (ButtonsInfo.W, ButtonsInfo.A, ButtonsInfo.S, ButtonsInfo.D)
+	match sum(pressed_num_wasd):
+		case 0 | 4:
+			PLAYER.speed = 0
+		case 1:
+			PLAYER.speed = PLAYER.speed_def
+			match pressed_num_wasd:
+				case (False, False, False, True):
+					PLAYER.facing = 'right'
+				case (False, False, True, False):
+					PLAYER.facing = 'down'
+				case (False, True, False, False):
+					PLAYER.facing = 'left'
+				case (True, False, False, False):
+					PLAYER.facing = 'up'
+		case _: # 2
+			PLAYER.speed = PLAYER.speed_def
+			match pressed_num_wasd:
+				# case (True, False, True, False)|(False, True, False, True):
+				# 	pass
+				case (True, True, False, False):
+					PLAYER.facing = 'up-left'
+				case (True, False, False, True):
+					PLAYER.facing = 'up-right'
+				case (False, False, True, True):
+					PLAYER.facing = 'down-right'
+				case (False, True, True, False):
+					PLAYER.facing = 'down-left'
+			# (True, True, False, False) | (True, False, False, True) | (False, False, True, True) | (False, True, True, False)
+	
 
 def main():
 	pg.init()
@@ -29,23 +52,22 @@ def main():
 		"""
 		return None
 		"""
-		gen_per_tick = 10
+		gen_per_tick = 500
 		running = True
 		t = 0
-		while running:
-			"""LOGIC"""
+		def logic():
 			get_pressed()
+			pressed_logic()
 			get_clicked(get_camera_offset(Camera.pos))
 			Camera.pos = camera_logic(Camera.pos, PLAYER.pos, t)
-			# post_gen(gen_per_tick)
-			# ToGen.al = ToGen.al[gen_per_tick:]
-			for i in ToGen.al:
-				world_post_gen(*i)
-			ToGen.al = list()
+			gen_need = min(gen_per_tick, len(WorldMap.to_gen))
+			post_gen(gen_need)
+			WorldMap.to_gen = WorldMap.to_gen[gen_need:]
+			PLAYER.logic()
+		while running:
+			"""LOGIC"""
+			logic()
 			camera_offset = get_camera_offset(Camera.pos)
-			
-			PLAYER.y -= sin(t / 60) * 16
-			PLAYER.x -= cos(t / 60) * 16
 			# TODO
 			"""
 			Определение острова - если окружен водой
@@ -56,15 +78,6 @@ def main():
 			
 			"""RENDER"""
 			render_world(sc, camera_offset)
-			
-			pg.draw.rect(
-				sc,
-				(255, 255, 255),
-				Sets.Sc.cam_to_player_box,
-				3,
-				Sets.square_size,
-			)
-			
 			PLAYER.render(sc, camera_offset)
 			draw_path(sc, camera_offset)
 			draw_selected(sc, camera_offset)

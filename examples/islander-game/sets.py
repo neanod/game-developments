@@ -6,31 +6,38 @@ import pygame as pg
 class ButtonsInfo:
 	LMB = False
 	RMB = False
+	W = False
+	A = False
+	S = False
+	D = False
+	
 	m_pos: tuple[int, int] = 0, 0
 
 
 class Sets:
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
-	square_size: int = 12
-	matching = True
+	square_size: int = 17
+	matching: bool = True
 	
-	spawn_zone = 6
+	spawn_zone: float = 6.0
+	water_level: float = 0.85
 	
-	gen_dist = 3
-	noise = PerlinNoise(octaves=5, seed=randint(10000, 1000000))
-	amp = 1.6
-	period = 1500 / square_size
+	gen_dist: int = -3
+	noise: PerlinNoise = PerlinNoise(octaves=15, seed=randint(10000, 1000000))
+	amp: float = 1.6
+	period: float = 1500 / square_size
 	
 	class Sc:
-		res: list[int] = [1920 - 200, 1080 - 200]
+		res: list[int, int] = [1920 - 200, 1080 - 200]
+		# res: list[int, int] = [1920, 1080]
 		width: int = res[0]
 		height: int = res[1]
 		h_width: int = width // 2
 		h_height: int = height // 2
-		center: list[int] = [h_width, h_height]
+		center: list[int, int] = [h_width, h_height]
 		
-		cam_to_player_box_size = [400, 200]
+		cam_to_player_box_size: list[int, int] = [h_width // 2, h_height // 2]
 		cam_to_player_box: pg.Rect = pg.Rect(
 			[
 				h_width - cam_to_player_box_size[0] * 0.5,

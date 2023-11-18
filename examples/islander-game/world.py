@@ -1,10 +1,5 @@
 from sets import Sets
-from numpy import floor
 import heapq
-
-
-class ToGen:
-	al: list = list()
 
 
 class Camera:
@@ -44,21 +39,21 @@ def camera_logic(camera_pos, player_pos, t) -> list[int, int]:
 			player_pos[1] + Sets.Sc.cam_to_player_box_size[1] // 2,
 		)
 	]
-	
+	if t % 6:
+		return camera_pos
 	# world_generation
 	camera_offset = camera_pos[0] - Sets.Sc.h_width, camera_pos[1] - Sets.Sc.h_height
 	
 	gen_size_x, gen_size_y = Sets.Sc.width // Sets.square_size + Sets.gen_dist * 2, Sets.Sc.height // Sets.square_size + Sets.gen_dist * 2
-	left = int(camera_offset[0] // Sets.square_size - Sets.gen_dist)
-	top = int(camera_offset[1] // Sets.square_size - Sets.gen_dist)
+	left = int(camera_offset[0] // Sets.square_size - Sets.gen_dist + 1)
+	top = int(camera_offset[1] // Sets.square_size - Sets.gen_dist + 1)
 	world_keys = WorldMap.land_map.keys()
 	
-	for x in range(left - 1, left + gen_size_x + 1):
-		for z in range(top - 1, top + gen_size_y + 1):
+	for x in range(left - 1, left + gen_size_x):
+		for z in range(top - 1, top + gen_size_y):
 			if (x, z) not in world_keys:
-				if (x, z) not in ToGen.al:
-					ToGen.al.append((x, z))
-			# world_post_gen(x, z)
+				if (x, z) not in WorldMap.to_gen:
+					WorldMap.to_gen.append((x, z))
 	return camera_pos
 
 
@@ -93,8 +88,8 @@ def find_path_a_star(start_pos, end_pos, world_map):
 		]:
 			neighbor = (current_pos[0] + delta_pos[0], current_pos[1] + delta_pos[1])
 			
-			if neighbor in world_map:
-				if world_map[neighbor]:
+			if neighbor in world_map.keys():
+				if world_map[neighbor] > Sets.water_level:
 					tentative_g = g_score[current_pos] + 1
 					
 					if neighbor not in g_score or tentative_g < g_score[neighbor]:
@@ -118,58 +113,25 @@ def clamp_color_channel(_x) -> int:
 	return max(0, min(255, _x))
 
 
-def world_post_gen(x, z) -> None:
+def world_post_gen(x_pos, z_pos) -> None:
 	"""
-	:type z: int
-	:type x: int
+	:type z_pos: int
+	:type x_pos: int
 	"""
-	
-	WorldMap.land_map[(x, z)] = not not int(floor((Sets.noise([x / Sets.period, z / Sets.period]) + 0.5) * Sets.amp))
-
-
-def world_gen(size_x, size_z) -> dict:
-	"""
-	:type size_x: int
-	:type size_z: int
-	"""
-	noise = Sets.noise
-	
-	amp = Sets.amp
-	period = Sets.period
-	
-	land_map = [[0 for _ in range(size_z)] for _ in range(size_x)]
-	map_dict: dict = {}
-	
-	for position in range(size_x * size_z * 2 - size_x * 2):
-		# вычисление высоты y в координатах (x, z)
-		x_pos = floor(position // size_x)
-		z_pos = floor(position % size_z)
-		y_pos = floor((noise([x_pos / period, z_pos / period]) + 0.5) * amp)
-		try:
-			land_map[int(x_pos)][int(z_pos)] = not not int(y_pos)
-		except IndexError:
-			pass
-	
-	for x in range(size_x):
-		for z in range(size_z):
-			map_dict[x, z] = land_map[x][z]
-	
-	# spawn zone
-	spawn_zone = Sets.spawn_zone
-	center = Sets.Sc.h_width // Sets.square_size, Sets.Sc.h_height // Sets.square_size
-	
-	for x in range(-spawn_zone, spawn_zone):
-		for z in range(-spawn_zone, spawn_zone):
-			if x * x + z * z < spawn_zone * spawn_zone:
-				map_dict[x + center[0], z + center[1]] = True
-	
-	return map_dict
+	WorldMap.land_map[(x_pos, z_pos)] = (Sets.noise([x_pos / Sets.period, z_pos / Sets.period]) + 0.5 * Sets.amp)
 
 
 class WorldMap:
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
-	# шум Перлина
-	land_map: dict = world_gen(*size)
+	to_gen: list = list()
+	land_map: dict = dict()
+
+
+offset = 30, 30
+size = WorldMap.size
+for x in range(-offset[0], size[0] + offset[0]):
+	for z in range(-offset[1], size[1] + 1 + offset[1]):
+		world_post_gen(x, z)
 
 
 if __name__ == '__main__':

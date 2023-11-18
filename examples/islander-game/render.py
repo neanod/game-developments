@@ -1,6 +1,6 @@
 from sets import SelectedInfo, ButtonsInfo, Sets
 from world import WorldMap, find_path_a_star
-from matan import get_clicked_rectangle, exit_game
+from matan import get_clicked_rectangle, exit_game, get_color
 import pygame as pg
 
 
@@ -15,12 +15,32 @@ def get_pressed():
 						ButtonsInfo.LMB = True
 					case 3:
 						ButtonsInfo.RMB = True
+			case pg.KEYDOWN:
+				match event.key:
+					case pg.K_w:
+						ButtonsInfo.W = True
+					case pg.K_a:
+						ButtonsInfo.A = True
+					case pg.K_s:
+						ButtonsInfo.S = True
+					case pg.K_d:
+						ButtonsInfo.D = True
 			case pg.MOUSEBUTTONUP:
 				match event.button:
 					case 1:
 						ButtonsInfo.LMB = False
 					case 3:
 						ButtonsInfo.RMB = False
+			case pg.KEYUP:
+				match event.key:
+					case pg.K_w:
+						ButtonsInfo.W = False
+					case pg.K_a:
+						ButtonsInfo.A = False
+					case pg.K_s:
+						ButtonsInfo.S = False
+					case pg.K_d:
+						ButtonsInfo.D = False
 
 
 def render_world(sc, offset):
@@ -33,80 +53,87 @@ def render_world(sc, offset):
 	offset = -offset[0], -offset[1]
 	
 	sc.fill((0, 0, 120))
-	color = 0, 155, 0
 	block_offset: list[int, int] = [int(-offset[0] // Sets.square_size), int(-offset[1] // Sets.square_size)]
+	
+	land_map = WorldMap.land_map
 	for x in range(block_offset[0], WorldMap.size[0] + 1 + block_offset[0]):
 		for z in range(block_offset[1], WorldMap.size[1] + block_offset[1] + 1):
-			rect = [
-				x * Sets.square_size + offset[0],
-				z * Sets.square_size + offset[1],
-				Sets.square_size,
-				Sets.square_size,
-			]
-			if (x, z) not in WorldMap.land_map.keys():
-				pg.draw.rect(sc, (0, 0, 0), rect, 10)
+			if (x, z) not in land_map.keys():
 				continue
-			if not WorldMap.land_map[x, z]:
-				continue
+			rect = pg.Rect(
+				[
+					x * Sets.square_size + offset[0],
+					z * Sets.square_size + offset[1],
+					Sets.square_size,
+					Sets.square_size,
+				]
+			)
+			color = get_color(land_map[x, z])
 			neighbours = list()  # [top, right, bottom, left]
 			
-			default_value = False
+			default_value = 0
 			radius = Sets.square_size // 3
 			
-			try:
-				neighbours.append(WorldMap.land_map[x, z - 1])
-			except KeyError:
-				neighbours.append(default_value)
-			try:
-				neighbours.append(WorldMap.land_map[x + 1, z])
-			except KeyError:
-				neighbours.append(default_value)
-			try:
-				neighbours.append(WorldMap.land_map[x, z + 1])
-			except KeyError:
-				neighbours.append(default_value)
-			try:
-				neighbours.append(WorldMap.land_map[x - 1, z])
-			except KeyError:
-				neighbours.append(default_value)
-			
-			if (x, z) in WorldMap.land_map.keys():
+			if land_map[x, z] > Sets.water_level:
+				
 				if Sets.matching:
-					offset = list(offset)
-					match neighbours:
-						case [False, False, False, False]:
-							pg.draw.rect(sc, color, rect, border_radius=radius)
+					try:
+						neighbours.append(WorldMap.land_map[x, z - 1])
+					except KeyError:
+						neighbours.append(default_value)
+					try:
+						neighbours.append(WorldMap.land_map[x + 1, z])
+					except KeyError:
+						neighbours.append(default_value)
+					try:
+						neighbours.append(WorldMap.land_map[x, z + 1])
+					except KeyError:
+						neighbours.append(default_value)
+					try:
+						neighbours.append(WorldMap.land_map[x - 1, z])
+					except KeyError:
+						neighbours.append(default_value)
 						
-						case [False, False, False, True]:
-							pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_bottom_right_radius=radius)
-						case [False, False, True, False]:
-							pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_top_left_radius=radius)
-						case [False, True, False, False]:
-							pg.draw.rect(sc, color, rect, border_top_left_radius=radius, border_bottom_left_radius=radius)
-						case [True, False, False, False]:
-							pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius, border_bottom_right_radius=radius)
-						
-						case [False, False, True, True]:
-							pg.draw.rect(sc, color, rect, border_top_right_radius=radius)
-						case [False, True, True, False]:
-							pg.draw.rect(sc, color, rect, border_top_left_radius=radius)
-						case [True, True, False, False]:
-							pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius)
-						case [True, False, False, True]:
-							pg.draw.rect(sc, color, rect, border_bottom_right_radius=radius)
-						
-						case _:
-							pg.draw.rect(sc, color, rect)
-				else:
-					pg.draw.rect(sc, color, rect)
+					# костыль чтобы bool вместо float
+					neighbours: list[bool] = [x > Sets.water_level for x in neighbours]
+				
+				if (x, z) in WorldMap.land_map.keys():
+					if Sets.matching:
+						offset = list(offset)
+						match neighbours:
+							case [False, False, False, False]:
+								pg.draw.rect(sc, color, rect, border_radius=radius)
+							
+							case [False, False, False, True]:
+								pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_bottom_right_radius=radius)
+							case [False, False, True, False]:
+								pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_top_left_radius=radius)
+							case [False, True, False, False]:
+								pg.draw.rect(sc, color, rect, border_top_left_radius=radius, border_bottom_left_radius=radius)
+							case [True, False, False, False]:
+								pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius, border_bottom_right_radius=radius)
+							
+							case [False, False, True, True]:
+								pg.draw.rect(sc, color, rect, border_top_right_radius=radius)
+							case [False, True, True, False]:
+								pg.draw.rect(sc, color, rect, border_top_left_radius=radius)
+							case [True, True, False, False]:
+								pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius)
+							case [True, False, False, True]:
+								pg.draw.rect(sc, color, rect, border_bottom_right_radius=radius)
+							
+							case _:
+								pg.draw.rect(sc, color, rect)
+			else:
+				pg.draw.rect(sc, color, rect)
 
 
 def render_selected_rect(pos, color, sc, offset):
 	pg.draw.rect(
 		surface=sc,
 		rect=[
-			Sets.square_size * pos[0] + offset[0],
-			Sets.square_size * pos[1] + offset[1],
+			Sets.square_size * pos[0] - offset[0],
+			Sets.square_size * pos[1] - offset[1],
 			Sets.square_size,
 			Sets.square_size,
 		],
@@ -129,20 +156,20 @@ def get_clicked(offset):
 	if ButtonsInfo.LMB:
 		clicked_rect = get_clicked_rectangle(ButtonsInfo.m_pos, offset)
 		if clicked_rect in WorldMap.land_map.keys():
-			if WorldMap.land_map[clicked_rect]:
+			if WorldMap.land_map[clicked_rect] > Sets.water_level:
 				SelectedInfo.LMB_POS = clicked_rect
 				update_path()
 	if ButtonsInfo.RMB:
 		clicked_rect = get_clicked_rectangle(ButtonsInfo.m_pos, offset)
 		if clicked_rect in WorldMap.land_map.keys():
-			if WorldMap.land_map[clicked_rect]:
+			if WorldMap.land_map[clicked_rect] > Sets.water_level:
 				SelectedInfo.RMB_POS = clicked_rect
 				update_path()
 
 
 def draw_path(sc, offset):
 	if Path.path:
-		path = [[(x[0] + 0.5) * Sets.square_size + offset[0], (x[1] + 0.5) * Sets.square_size + offset[1]] for x in
+		path = [[(x[0] + 0.5) * Sets.square_size - offset[0], (x[1] + 0.5) * Sets.square_size - offset[1]] for x in
 		        Path.path]
 		
 		if len(path) - 1:
