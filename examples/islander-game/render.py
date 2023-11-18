@@ -57,7 +57,7 @@ def render_world(sc, offset):
 	
 	land_map = WorldMap.land_map
 	for x in range(block_offset[0], WorldMap.size[0] + 1 + block_offset[0]):
-		for z in range(block_offset[1], WorldMap.size[1] + block_offset[1] + 1):
+		for z in range(block_offset[1], WorldMap.size[1] + block_offset[1] + 2):
 			if (x, z) not in land_map.keys():
 				continue
 			rect = pg.Rect(
