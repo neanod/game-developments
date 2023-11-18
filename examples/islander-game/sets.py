@@ -23,7 +23,7 @@ class Sets:
 	spawn_zone: float = 6.0
 	water_level: float = 0.85
 	
-	gen_dist: int = -3
+	gen_dist: int = 15
 	noise: PerlinNoise = PerlinNoise(octaves=15, seed=randint(10000, 1000000))
 	amp: float = 1.6
 	period: float = 1500 / square_size
