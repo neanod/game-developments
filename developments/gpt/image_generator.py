@@ -22,6 +22,11 @@ def generate(prompt: str) -> list[str, str]:
 	except openai.BadRequestError as e:
 		print("Bad request")
 		return ["IMAGE-GEN: Can't generate images", f"Because Bad request\n{e}"]
+	except Exception as e:
+		if '<title>Attention Required! | Cloudflare</title>' in e:
+			return ["IMAGE-GEN: Can't generate images", "Because IP banned"]
+		else:
+			return ["IMAGE-GEN: Can't generate images", f"Because... ХЗ BLYAT ЛОВИ ЧЕПОЛАХ!\n{e}"]
 	
 	return [response.data[0].url, response.data[0].revised_prompt]
 

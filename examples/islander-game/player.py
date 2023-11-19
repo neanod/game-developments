@@ -1,5 +1,6 @@
 from math import sqrt
 from sets import Sets
+from world import WorldMap
 from pygame import draw, Surface
 
 
@@ -18,7 +19,7 @@ class Player:
 		if x is None or y is None:
 			x, y = Sets.Sc.center
 		if speed_def is None:
-			speed_def = 8
+			speed_def = 12
 		if facing is None:
 			facing = 'up'
 		self.color = color
@@ -29,8 +30,8 @@ class Player:
 		self.sq2 = sqrt(2) / 2
 	
 	@property
-	def pos(self) -> list[int, int]:
-		return [self.x, self.y]
+	def pos(self) -> tuple[int, int]:
+		return self.x, self.y
 	
 	@property
 	def speed_x(self):

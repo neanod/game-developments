@@ -1,3 +1,5 @@
+from math import dist
+
 from sets import Sets
 import heapq
 
@@ -131,7 +133,10 @@ offset = 30, 30
 size = WorldMap.size
 for x in range(-offset[0], size[0] + offset[0]):
 	for z in range(-offset[1], size[1] + 1 + offset[1]):
-		world_post_gen(x, z)
+		if dist((x, z), (Sets.Sc.h_width // Sets.square_size, Sets.Sc.h_height // Sets.square_size)) < Sets.spawn_zone:
+			WorldMap.land_map[x, z] = Sets.water_level + 0.1
+		else:
+			world_post_gen(x, z)
 
 
 if __name__ == '__main__':
