@@ -165,16 +165,17 @@ def get_clicked(offset):
 
 def draw_path(sc, offset):
 	if Path.path:
-		path = [[(x[0] + 0.5) * Sets.square_size - offset[0], (x[1] + 0.5) * Sets.square_size - offset[1]] for x in
-		        Path.path]
-		
-		if len(path) - 1:
-			pg.draw.lines(
+		if len(Path.path) - 1:
+			pg.draw.aalines(
 				surface=sc,
 				color=(255, 255, 255),
 				closed=False,
-				points=path,
-				width=10,
+				points=[
+					[
+						(x[0] + 0.5) * Sets.square_size - offset[0],
+						(x[1] + 0.5) * Sets.square_size - offset[1]
+					] for x in Path.path
+				],
 			)
 
 

@@ -29,8 +29,8 @@ class Sets:
 	water_level: float = 1.2
 	
 	class Sc:
-		res: list[int, int] = [1920 - 200, 1080 - 200]
-		# res: list[int, int] = [1920, 1080]
+		# res: list[int, int] = [1920 - 200, 1080 - 200]
+		res: list[int, int] = [1920, 1080]
 		width: int = res[0]
 		height: int = res[1]
 		h_width: int = width // 2
