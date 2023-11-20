@@ -1,6 +1,5 @@
 from math import sqrt
 from sets import Sets
-from world import WorldMap
 from pygame import draw, Surface
 
 
@@ -81,13 +80,6 @@ class Player:
 		return self.speed_x, self.speed_y
 	
 	def render(self, sc: Surface, offset):
-		# draw.rect(
-		# 	sc,
-		# 	(255, 255, 255),
-		# 	Sets.Sc.cam_to_player_box,
-		# 	3,
-		# 	Sets.square_size,
-		# )
 		draw.circle(
 			sc,
 			self.color,

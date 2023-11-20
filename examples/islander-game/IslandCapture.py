@@ -62,7 +62,7 @@ def main():
 			Camera.pos = camera_logic(Camera.pos, PLAYER.pos, t)
 			gen_need = min(gen_per_tick, len(WorldMap.to_gen))
 			post_gen(gen_need)
-			WorldMap.to_gen = WorldMap.to_gen[gen_need:]
+			WorldMap.to_gen = tuple(WorldMap.to_gen)[gen_need:]
 			PLAYER.logic()
 		while running:
 			"""LOGIC"""

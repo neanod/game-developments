@@ -52,8 +52,6 @@ def render_world(sc, offset):
 	:type offset: list[int, int] | tuple[int, int]
 	:return: None
 	"""
-	sc.fill((100, 100, 100))
-	
 	a_screen_rect = pg.Rect((
 		offset[0],
 		offset[1],
@@ -86,7 +84,6 @@ def alternate_render_world(sc, offset):
 	:type offset: tuple[int, int]
 	"""
 	
-	# sc.fill((0, 0, 120))
 	block_offset: list[int, int] = [int(offset[0] // Sets.square_size), int(offset[1] // Sets.square_size)]
 	
 	land_map = WorldMap.land_map

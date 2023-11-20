@@ -146,7 +146,7 @@ def world_post_gen(x_pos, z_pos) -> None:
 			)
 		)
 		
-		# WorldMap.chunks[-1].add_block(x_pos, z_pos, h)
+		WorldMap.chunks[-1].add_block(x_pos, z_pos, h)
 		
 
 class WorldChunk:
@@ -183,8 +183,8 @@ class WorldChunk:
 		:param force: force set the height of block
 		:return: None
 		"""
-		# print(f"Im C{self.cpos}, gen b at B{_x, _y}")
-		# in_chunk: bool = (_x // WorldMap.size[0] == self.cx) and (_y // WorldMap.size[1] == self.cz)
+		
+		# in_chunk: bool = (_x // WorldMap.chunk_size == self.cx) and (_y // WorldMap.chunk_size == self.cz)
 		# if not in_chunk:
 		# 	print(f"Block B({_x, _y}) not in chunk C({self.cx, self.cz})")
 		# 	raise ValueError
@@ -237,7 +237,7 @@ class WorldMap:
 	chunk_size = 128
 	chunks: list[WorldChunk] = list()
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
-	to_gen: list = list()
+	to_gen: set = set()
 	land_map: dict = dict()
 
 
