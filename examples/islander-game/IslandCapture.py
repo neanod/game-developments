@@ -1,4 +1,4 @@
-from pygame import Surface, SurfaceType
+from pygame import Surface
 from render import *
 from matan import get_camera_offset
 from world import camera_logic, Camera, world_post_gen
@@ -26,7 +26,7 @@ def pressed_logic():
 					PLAYER.facing = 'left'
 				case (True, False, False, False):
 					PLAYER.facing = 'up'
-		case _: # 2
+		case _:  # 2
 			PLAYER.speed = PLAYER.speed_def
 			match pressed_num_wasd:
 				# case (True, False, True, False)|(False, True, False, True):
@@ -44,7 +44,7 @@ def pressed_logic():
 
 def main():
 	pg.init()
-	sc: Surface | SurfaceType = pg.display.set_mode(Sets.Sc.res)
+	sc: Surface = pg.display.set_mode(Sets.Sc.res)
 	pg.display.set_caption("Island Capture.")
 	clock = pg.time.Clock()
 	

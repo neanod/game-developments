@@ -162,7 +162,7 @@ def main():
 		
 		def handle_event(self, event):
 			if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-				if self.rect.collidepoint(event.pos):
+				if self.rect.collidepoint(event.a_pos):
 					if self.action:  # Выполнение действия, связанного с кнопкой
 						self.action()
 					return True

@@ -17,10 +17,10 @@ class ButtonsInfo:
 class Sets:
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
-	square_size: int = 20
+	square_size: int = 7
 	matching: bool = False
 	
-	spawn_zone: float = 6.0
+	spawn_zone: float = 0
 	
 	gen_dist: int = 0
 	noise: PerlinNoise = PerlinNoise(octaves=6, seed=randint(10000, 1000000))
