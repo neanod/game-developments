@@ -237,7 +237,7 @@ class WorldMap:
 	chunk_size = 128
 	chunks: list[WorldChunk] = list()
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
-	to_gen: set = set()
+	to_gen: list = list()
 	land_map: dict = dict()
 
 
