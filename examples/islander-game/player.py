@@ -14,7 +14,7 @@ class Player:
 		:param facing: up, up-right, right, down-right, down, down-left, left, up-left
 		"""
 		if color is None:
-			color = 155, 0, 0
+			color = 80, 80, 80
 		if x is None or y is None:
 			x, y = Sets.Sc.center
 		if speed_def is None:
@@ -81,13 +81,14 @@ class Player:
 	
 	def render(self, sc: Surface, offset):
 		draw.circle(
-			sc,
-			self.color,
-			[
+			surface=sc,
+			color=self.color,
+			center=[
 				self.x - offset[0],
 				self.y - offset[1],
 			],
-			Sets.square_size // 1.5
+			radius=Sets.square_size // 1.5,
+			width=5,
 		)
 	
 	def logic(self):

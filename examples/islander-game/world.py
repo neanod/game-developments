@@ -136,12 +136,6 @@ def world_post_gen(x_pos, z_pos) -> None:
 			WorldChunk(
 				cposx,
 				cposz,
-				pygame.Surface(
-					(
-						WorldMap.chunk_size * Sets.square_size,
-						WorldMap.chunk_size * Sets.square_size,
-					)
-				),
 				get_color,
 			)
 		)
@@ -150,15 +144,13 @@ def world_post_gen(x_pos, z_pos) -> None:
 		
 
 class WorldChunk:
-	def __init__(self, cx, cz, surface, color_function):
+	def __init__(self, cx, cz, color_function):
 		"""
 		
 		:param cx: X position in chunk system
 		:type cx: int
 		:param cz: Y position in chunk system
 		:type cz: int
-		:param surface: Surfaces to render
-		:type surface: pygame.Surface
 		:param color_function: function, returns the color of block
 		:type color_function: function
 		"""
@@ -169,9 +161,16 @@ class WorldChunk:
 			self.az,
 			*WorldMap.size,
 		)
+		
 		self.cx = cx
 		self.cz = cz
-		self.sc = surface
+		self.sc = pygame.Surface(
+			size=(
+				WorldMap.chunk_size * Sets.square_size,
+				WorldMap.chunk_size * Sets.square_size,
+			),
+			# flags=pygame.SRCALPHA,
+		)
 		self.get_color = color_function
 		
 	def add_block(self, _x, _y, height, force=None) -> None:
@@ -234,7 +233,7 @@ class WorldChunk:
 
 
 class WorldMap:
-	chunk_size = 128
+	chunk_size = 1024
 	chunks: list[WorldChunk] = list()
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
 	to_gen: list = list()
@@ -260,7 +259,6 @@ if Sets.spawn_zone:
 					WorldMap.chunks.append(WorldChunk(
 						x % WorldMap.chunk_size,
 						z % WorldMap.chunk_size,
-						pygame.Surface((s, s)),
 						get_color,
 					))
 			else:
