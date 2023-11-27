@@ -17,16 +17,23 @@ class ButtonsInfo:
 class Sets:
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
-	square_size: int = 17
-	matching: bool = True
+	square_size: int = 15
+	matching: bool = False
 	
-	spawn_zone: float = 6.0
-	water_level: float = 0.85
+	spawn_zone: float = 0
 	
-	gen_dist: int = 15
-	noise: PerlinNoise = PerlinNoise(octaves=15, seed=randint(10000, 1000000))
-	amp: float = 1.6
-	period: float = 1500 / square_size
+	gen_dist: int = 10
+	seed = randint(
+			10000,
+			1000000
+	)
+	noise: PerlinNoise = PerlinNoise(
+		octaves=5,
+		seed=seed,
+	)
+	period: float = 2500 / square_size
+	amp: float = 2
+	water_level: float = 1.2
 	
 	class Sc:
 		res: list[int, int] = [1920 - 200, 1080 - 200]

@@ -1,5 +1,3 @@
-from numpy import sqrt
-
 from sets import Sets
 import pygame as pg
 
@@ -35,14 +33,15 @@ def get_color(n) -> pg.Color:
 	water_level = Sets.water_level
 	if n < water_level:
 		minimum = 50
-		blue = int(n / water_level * (255 - minimum) + minimum)
-		return pg.Color(0, 0, blue)
-	green = 200
-	red = int((n - water_level) / 100 + 100)
-	return pg.Color(red, green, 0)
+		r = g = 0
+		b = int(n / water_level * (255 - minimum) + minimum)
+		return pg.Color(r, g, b)
+	r = min(255, int((((n + 0.3) / amplitude) ** 5) * 455))
+	g = 200
+	b = 0
+	return pg.Color(r, g, b)
 
 
 def exit_game():
 	pg.quit()
 	quit(0)
-

@@ -45,25 +45,56 @@ def get_pressed():
 
 def render_world(sc, offset):
 	"""
+	
+	:param sc: Main surface
 	:type sc: pg.Surface
+	:param offset: Offset in "A" coordinate system
 	:type offset: list[int, int] | tuple[int, int]
+	:return: None
+	"""
+	a_screen_rect = pg.Rect((
+		offset[0],
+		offset[1],
+		Sets.Sc.width,
+		Sets.Sc.height,
+	))
+	
+	for chunk in WorldMap.chunks:
+		if chunk.get_rect().colliderect(a_screen_rect):
+			chunk.render_to_source(
+				sc,
+				offset,
+			)
+		pg.draw.rect(
+			sc,
+			(255, 0, 0),
+			[
+				chunk.ax - offset[0],
+				chunk.az - offset[1],
+				WorldMap.chunk_size * Sets.square_size,
+				WorldMap.chunk_size * Sets.square_size,
+			],
+			1
+		)
+
+
+def alternate_render_world(sc, offset):
+	"""
+	:type sc: pg.Surface
+	:type offset: tuple[int, int]
 	"""
 	
-	offset = list(offset)
-	offset = -offset[0], -offset[1]
-	
-	sc.fill((0, 0, 120))
-	block_offset: list[int, int] = [int(-offset[0] // Sets.square_size), int(-offset[1] // Sets.square_size)]
+	block_offset: list[int, int] = [int(offset[0] // Sets.square_size), int(offset[1] // Sets.square_size)]
 	
 	land_map = WorldMap.land_map
 	for x in range(block_offset[0], WorldMap.size[0] + 1 + block_offset[0]):
-		for z in range(block_offset[1], WorldMap.size[1] + block_offset[1] + 1):
+		for z in range(block_offset[1], WorldMap.size[1] + block_offset[1] + 2):
 			if (x, z) not in land_map.keys():
 				continue
 			rect = pg.Rect(
 				[
-					x * Sets.square_size + offset[0],
-					z * Sets.square_size + offset[1],
+					x * Sets.square_size - offset[0],
+					z * Sets.square_size - offset[1],
 					Sets.square_size,
 					Sets.square_size,
 				]
@@ -78,40 +109,43 @@ def render_world(sc, offset):
 				
 				if Sets.matching:
 					try:
-						neighbours.append(WorldMap.land_map[x, z - 1])
+						neighbours.append(WorldMap.land_map[x, z - 1] > Sets.water_level)
 					except KeyError:
 						neighbours.append(default_value)
 					try:
-						neighbours.append(WorldMap.land_map[x + 1, z])
+						neighbours.append(WorldMap.land_map[x + 1, z] > Sets.water_level)
 					except KeyError:
 						neighbours.append(default_value)
 					try:
-						neighbours.append(WorldMap.land_map[x, z + 1])
+						neighbours.append(WorldMap.land_map[x, z + 1] > Sets.water_level)
 					except KeyError:
 						neighbours.append(default_value)
 					try:
-						neighbours.append(WorldMap.land_map[x - 1, z])
+						neighbours.append(WorldMap.land_map[x - 1, z] > Sets.water_level)
 					except KeyError:
 						neighbours.append(default_value)
-						
-					# костыль чтобы bool вместо float
-					neighbours: list[bool] = [x > Sets.water_level for x in neighbours]
+				
+				else:
+					pg.draw.rect(sc, color, rect)
 				
 				if (x, z) in WorldMap.land_map.keys():
 					if Sets.matching:
-						offset = list(offset)
 						match neighbours:
 							case [False, False, False, False]:
 								pg.draw.rect(sc, color, rect, border_radius=radius)
 							
 							case [False, False, False, True]:
-								pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_bottom_right_radius=radius)
+								pg.draw.rect(sc, color, rect, border_top_right_radius=radius,
+								             border_bottom_right_radius=radius)
 							case [False, False, True, False]:
-								pg.draw.rect(sc, color, rect, border_top_right_radius=radius, border_top_left_radius=radius)
+								pg.draw.rect(sc, color, rect, border_top_right_radius=radius,
+								             border_top_left_radius=radius)
 							case [False, True, False, False]:
-								pg.draw.rect(sc, color, rect, border_top_left_radius=radius, border_bottom_left_radius=radius)
+								pg.draw.rect(sc, color, rect, border_top_left_radius=radius,
+								             border_bottom_left_radius=radius)
 							case [True, False, False, False]:
-								pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius, border_bottom_right_radius=radius)
+								pg.draw.rect(sc, color, rect, border_bottom_left_radius=radius,
+								             border_bottom_right_radius=radius)
 							
 							case [False, False, True, True]:
 								pg.draw.rect(sc, color, rect, border_top_right_radius=radius)
@@ -169,16 +203,17 @@ def get_clicked(offset):
 
 def draw_path(sc, offset):
 	if Path.path:
-		path = [[(x[0] + 0.5) * Sets.square_size - offset[0], (x[1] + 0.5) * Sets.square_size - offset[1]] for x in
-		        Path.path]
-		
-		if len(path) - 1:
-			pg.draw.lines(
+		if len(Path.path) - 1:
+			pg.draw.aalines(
 				surface=sc,
 				color=(255, 255, 255),
 				closed=False,
-				points=path,
-				width=10,
+				points=[
+					[
+						(x[0] + 0.5) * Sets.square_size - offset[0],
+						(x[1] + 0.5) * Sets.square_size - offset[1]
+					] for x in Path.path
+				],
 			)
 
 

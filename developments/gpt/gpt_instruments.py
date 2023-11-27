@@ -47,6 +47,7 @@ class GPT:
 						messages=self.message_history,
 						max_tokens=limit,
 						timeout=timeout,
+						frequency_penalty=0.1,
 					)
 					break
 				except openai.RateLimitError as e:

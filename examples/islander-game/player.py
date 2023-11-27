@@ -14,11 +14,11 @@ class Player:
 		:param facing: up, up-right, right, down-right, down, down-left, left, up-left
 		"""
 		if color is None:
-			color = 155, 0, 0
+			color = 80, 80, 80
 		if x is None or y is None:
 			x, y = Sets.Sc.center
 		if speed_def is None:
-			speed_def = 8
+			speed_def = 12
 		if facing is None:
 			facing = 'up'
 		self.color = color
@@ -29,8 +29,8 @@ class Player:
 		self.sq2 = sqrt(2) / 2
 	
 	@property
-	def pos(self) -> list[int, int]:
-		return [self.x, self.y]
+	def pos(self) -> tuple[int, int]:
+		return self.x, self.y
 	
 	@property
 	def speed_x(self):
@@ -80,21 +80,15 @@ class Player:
 		return self.speed_x, self.speed_y
 	
 	def render(self, sc: Surface, offset):
-		# draw.rect(
-		# 	sc,
-		# 	(255, 255, 255),
-		# 	Sets.Sc.cam_to_player_box,
-		# 	3,
-		# 	Sets.square_size,
-		# )
 		draw.circle(
-			sc,
-			self.color,
-			[
+			surface=sc,
+			color=self.color,
+			center=[
 				self.x - offset[0],
 				self.y - offset[1],
 			],
-			Sets.square_size // 1.5
+			radius=Sets.square_size // 1.5,
+			width=5,
 		)
 	
 	def logic(self):
