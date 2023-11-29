@@ -52,7 +52,11 @@ class Sets:
 				*cam_to_player_box_size,
 			]
 		)
-
+		
+	class II:
+		a_star_min = 40
+		a_star_max = 200
+	
 
 class SelectedInfo:
 	LMB_POS = None

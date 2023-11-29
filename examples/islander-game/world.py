@@ -9,14 +9,20 @@ class Camera:
 	pos = list(Sets.Sc.center.copy())
 
 
-def clamp(_x, _min, _max):
+def clamp(_x: int | float, _min: int | float, _max: int | float) -> int | float:
+	"""
+	:param _x: number to clamp
+	:param _min: minimum
+	:param _max: maximum
+	:return: clamped number
+	"""
 	return min(_max, max(_min, _x))
 
 
-def heuristic_cost_estimate(pos, goal):
+def heuristic_cost_estimate(pos, goal) -> float:
 	x1, y1 = pos
 	x2, y2 = goal
-	n = 2
+	n = 1.6  # если делать по dist(pos, pos2) то получится хуже
 	return (abs(x1 - x2) ** n + abs(y1 - y2) ** n) ** (1 / n)
 
 
@@ -83,7 +89,7 @@ def find_path_a_star(start_pos, end_pos, world_map):
 		
 		for delta_pos in [
 			(1, 0), (0, 1), (-1, 0), (0, -1),
-			# (1, 1), (1, -1), (-1, 1), (-1, -1),
+			(1, 1), (1, -1), (-1, 1), (-1, -1),
 			
 			# (-1, 2), (0, 2), (1, 2), (2, 2),
 			# (-2, -2), (0, -2), (1, -2), (1, -2),

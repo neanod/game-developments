@@ -52,7 +52,7 @@ class Player:
 			case 'up-left':
 				return -self.speed * self.sq2
 			case _:
-				print(f"invalid player facing \"{self.facing}\"")
+				print(f"invalid player angle \"{self.facing}\"")
 				raise ValueError
 	
 	@property
