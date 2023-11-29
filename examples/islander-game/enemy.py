@@ -3,7 +3,7 @@ from sets import Sets
 from pygame import draw, Surface
 
 
-class Player:
+class Enemy:
 	def __init__(self, x=None, y=None, color=None, speed_def=None, facing=None) -> None:
 		"""
 		:type x: int | float
@@ -52,7 +52,7 @@ class Player:
 			case 'up-left':
 				return -self.speed * self.sq2
 			case _:
-				print(f"invalid player facing \"{self.facing}\"")
+				print(f"invalid enemy facing \"{self.facing}\"")
 				raise ValueError
 	
 	@property
@@ -96,9 +96,5 @@ class Player:
 		self.y += self.speed_y
 
 
-def main():
-	input("Этот файл не предназначен для запуска")
-
-
 if __name__ == '__main__':
-	main()
+	input("Этот файл не предназначен для запуска")
