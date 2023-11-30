@@ -27,8 +27,12 @@ class Sets:
 			10000,
 			1000000
 	)
+	# noise: PerlinNoise = PerlinNoise(
+	# 	octaves=5,
+	# 	seed=seed,
+	# )
 	noise: PerlinNoise = PerlinNoise(
-		octaves=5,
+		octaves=12,
 		seed=seed,
 	)
 	period: float = 2500 / square_size

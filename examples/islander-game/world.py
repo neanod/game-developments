@@ -147,7 +147,7 @@ def world_post_gen(x_pos, z_pos) -> None:
 		)
 		
 		WorldMap.chunks[-1].add_block(x_pos, z_pos, h)
-		
+
 
 class WorldChunk:
 	def __init__(self, cx, cz, color_function):
@@ -175,36 +175,91 @@ class WorldChunk:
 				WorldMap.chunk_size * Sets.square_size,
 				WorldMap.chunk_size * Sets.square_size,
 			),
-			# flags=pygame.SRCALPHA,
 		)
 		self.get_color = color_function
-		
-	def add_block(self, _x, _y, height, force=None) -> None:
+	
+	def add_block(self, _x: int, _y: int, height: float, force=None) -> None:
 		"""
 		:param _x: x_pos in blocky system
 		:param _y: y_pos in blocky system
 		:param height: height of block in the world
 		:type height: float
 		:param force: force set the height of block
-		:return: None
 		"""
 		
-		# in_chunk: bool = (_x // WorldMap.chunk_size == self.cx) and (_y // WorldMap.chunk_size == self.cz)
-		# if not in_chunk:
-		# 	print(f"Block B({_x, _y}) not in chunk C({self.cx, self.cz})")
-		# 	raise ValueError
-		# 	return
-		
 		color = self.get_color(height) if force is None else force
+		rad: int = Sets.square_size // 2
+		
+		if height <= Sets.water_level:
+			self.sc.fill(
+				color=color,
+				rect=[
+					_x * Sets.square_size - self.ax,
+					_y * Sets.square_size - self.az,
+					Sets.square_size,
+					Sets.square_size,
+				]
+			)
+			return
 		
 		self.sc.fill(
-			color=color,
+			color=(0, 0, 255),
 			rect=[
 				_x * Sets.square_size - self.ax,
 				_y * Sets.square_size - self.az,
 				Sets.square_size,
 				Sets.square_size,
 			]
+		)
+		# ground
+		# соседство тьюринга. потому что не фон неймана
+		neighbour: list[bool, bool, bool, bool] = list()
+		for delta in [
+			(0, -1),
+			(1, 0),
+			(0, 1),
+			(-1, 0),
+		]:
+			if (delta[0] + _x, delta[1] + _y) in WorldMap.land_map.keys():
+				neighbour.append(WorldMap.land_map[delta[0] + _x, delta[1] + _y] > Sets.water_level)
+			else:
+				neighbour.append((Sets.noise([(delta[0] + _x) / Sets.period,
+				                              (delta[1] + _y) / Sets.period]) + 0.5 * Sets.amp) > Sets.water_level)
+		
+		match neighbour:
+			case [0, 0, 0, 0]:
+				args = rad,
+			case [1, 0, 0, 0]:
+				args = -1, 0, 0, rad, rad
+			case [0, 1, 0, 0]:
+				args = -1, rad, 0, rad, 0
+			case [0, 0, 1, 0]:
+				args = -1, rad, rad, -1, 0
+			case [0, 0, 0, 1]:
+				args = -1, 0, rad, 0, rad
+			case [1, 1, 0, 0]:
+				args = -1, 0, 0, rad, 0
+			case [0, 1, 1, 0]:
+				args = -1, rad, 0, 0, 0
+			case [0, 0, 1, 1]:
+				args = -1, 0, rad, 0, 0
+			case [1, 0, 0, 1]:
+				args = -1, 0, 0, 0, rad
+			case [1, 1, 1, 1] | [0, 1, 1, 1] | [1, 0, 1, 1] | [1, 1, 0, 1] | [1, 1, 1, 0] | [1, 0, 1, 0] | [0, 1, 0, 1]:
+				args = ()
+		
+		pygame.draw.rect(
+			self.sc,
+			color,
+			[
+				_x * Sets.square_size - self.ax,
+				_y * Sets.square_size - self.az,
+				Sets.square_size,
+				Sets.square_size,
+			],
+			0,
+			*args
+		
 		)
 	
 	@property
@@ -269,7 +324,6 @@ if Sets.spawn_zone:
 					))
 			else:
 				world_post_gen(x, z)
-
 
 if __name__ == '__main__':
 	input("Это не основной файл. Откройте IslandCapture.py")
