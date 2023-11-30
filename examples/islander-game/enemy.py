@@ -2,7 +2,6 @@ from numpy import sin, cos, arctan2
 from math import dist
 from sets import Sets
 from pygame import draw, Surface, Color
-from types import FunctionType
 
 
 class Enemy:

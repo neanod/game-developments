@@ -18,7 +18,7 @@ class Sets:
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
 	square_size: int = 15
-	matching: bool = False
+	matching: bool = True
 	
 	spawn_zone: float = 0
 	
