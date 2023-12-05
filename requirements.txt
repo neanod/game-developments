@@ -11,3 +11,5 @@ keyboard
 tldextract
 selenium
 requests
+gpt4all
+colorama

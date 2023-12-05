@@ -1,4 +1,6 @@
 from sets import Sets
+from math import hypot
+from numpy import cross, ndarray
 import pygame as pg
 
 
@@ -31,10 +33,10 @@ def get_color(n) -> pg.Color:
 	"""
 	amplitude = Sets.amp
 	water_level = Sets.water_level
-	if n < water_level:
+	if n <= water_level:
 		minimum = 50
 		r = g = 0
-		b = int(n / water_level * (255 - minimum) + minimum)
+		b = clamp(int(n / water_level * (255 - minimum) + minimum), 0, 255)
 		return pg.Color(r, g, b)
 	r = min(255, int((((n + 0.3) / amplitude) ** 5) * 455))
 	g = 200
@@ -45,3 +47,67 @@ def get_color(n) -> pg.Color:
 def exit_game():
 	pg.quit()
 	quit(0)
+
+
+class Vec2:
+	def __init__(self, xy):
+		"""
+		vector in 2 dimensions
+		:type xy: tuple[int|float, int|float] | list[int|float, int|float]
+		:param xy: position
+		"""
+		self.x, self.y = xy
+	
+	def __abs__(self):
+		return hypot(self.x, self.y)
+	
+	def __iadd__(self, other):
+		self.x += other[0]
+		self.y += other[1]
+		return self
+	
+	def __isub__(self, other):
+		self.x -= other[0]
+		self.y -= other[1]
+		return self
+	
+	def __imul__(self, other):
+		if isinstance(other, (int, float)):
+			self.x *= other
+			self.y *= other
+		elif isinstance(other, (tuple, list)):
+			self.x, self.y = cross(self.xy, other)
+		return self
+	
+	def __add__(self, other) -> tuple:
+		return self.x + other[0], self.y + other[1]
+	
+	def __sub__(self, other) -> tuple:
+		return self.x - other[0], self.y - other[1]
+	
+	def __mul__(self, other) -> ndarray | tuple:
+		if isinstance(other, (int, float)):
+			return self.x * other, self.y * other
+		return cross(self.xy, other)
+	
+	def __truediv__(self, other: int | float):
+		return self.x / other, self.y / other
+	
+	def __floordiv__(self, other: int | float):
+		return int(self.x // other), int(self.y // other)
+	
+	def __radd__(self, other) -> tuple:
+		return self.x + other[0], self.y + other[1]
+	
+	def __rsub__(self, other) -> tuple:
+		return self.x - other[0], self.y - other[1]
+	
+	def __rmul__(self, other) -> ndarray | tuple:
+		if isinstance(other, (int, float)):
+			return self.x * other, self.y * other
+		return cross(self.xy, other)
+	
+	@property
+	def xy(self):
+		return self.x, self.y
+	

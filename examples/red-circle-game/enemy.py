@@ -12,7 +12,7 @@ class Enemy:
 		self.speed_dia = speed_dia
 		self.speed = 0
 		from random import randint
-		self.angle = randint(0, 31415926535898 * 2) / 10000000000000
+		self.angle = randint(0, 3141592653 * 2) / 1000000000
 		self.hp = hp
 	
 	def do_moving(self, target_pos: list[int, int]):

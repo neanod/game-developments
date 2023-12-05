@@ -1,6 +1,7 @@
 from math import sqrt
+from matan import Vec2
 from sets import Sets
-from pygame import draw, Surface
+from pygame import draw, Surface, Rect
 
 
 class Player:
@@ -14,23 +15,20 @@ class Player:
 		:param facing: up, up-right, right, down-right, down, down-left, left, up-left
 		"""
 		if color is None:
-			color = 80, 80, 80
+			color = 255, 255, 255
+		p = x, y
 		if x is None or y is None:
-			x, y = Sets.Sc.center
+			p = Sets.Sc.center
 		if speed_def is None:
 			speed_def = 12
 		if facing is None:
 			facing = 'up'
 		self.color = color
-		self.x, self.y = [int(x), int(y)]
+		self.pos = Vec2(p)
 		self.speed_def = speed_def
 		self.speed = speed_def
 		self.facing = facing
 		self.sq2 = sqrt(2) / 2
-	
-	@property
-	def pos(self) -> tuple[int, int]:
-		return self.x, self.y
 	
 	@property
 	def speed_x(self):
@@ -52,7 +50,7 @@ class Player:
 			case 'up-left':
 				return -self.speed * self.sq2
 			case _:
-				print(f"invalid player facing \"{self.facing}\"")
+				print(f"invalid player angle \"{self.facing}\"")
 				raise ValueError
 	
 	@property
@@ -79,21 +77,37 @@ class Player:
 	def speed_dim(self):
 		return self.speed_x, self.speed_y
 	
+	@property
+	def x(self) -> int | float:
+		return self.pos.x
+	
+	@property
+	def y(self) -> int | float:
+		return self.pos.y
+	
 	def render(self, sc: Surface, offset):
+		if not self.pos:
+			print("FUC@#CDEFF")
+			return
 		draw.circle(
 			surface=sc,
 			color=self.color,
-			center=[
-				self.x - offset[0],
-				self.y - offset[1],
-			],
+			center=self.pos - offset,
 			radius=Sets.square_size // 1.5,
 			width=5,
 		)
 	
-	def logic(self):
-		self.x += self.speed_x
-		self.y += self.speed_y
+	def logic(self, colliding: list[Rect]):
+		rect = Rect(
+			self.x + self.speed_x - Sets.square_size // 1.5,
+			self.y + self.speed_y - Sets.square_size // 1.5,
+			Sets.square_size // 1.5 * 2,
+			Sets.square_size // 1.5 * 2,
+		)
+		for coll in colliding:
+			if rect.colliderect(coll):
+				return
+		self.pos += self.speed_dim
 
 
 def main():
