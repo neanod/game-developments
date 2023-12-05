@@ -55,14 +55,14 @@ class GPT:
 					print("\tRate Limit exhausted. Retrying")
 					if "Request too large" in str(e):
 						completion = {
-							"role": "system",
+							"role": "assistant",
 							"content": "NO_INFORMATION - too long request",
 						}
 						break
 						
 				except openai.BadRequestError:
 					completion = {
-						"role": "system",
+						"role": "assistant",
 						"content": "NO_INFORMATION - too long request",
 					}
 					break

@@ -4,45 +4,6 @@ from matan import get_clicked_rectangle, exit_game, get_color
 import pygame as pg
 
 
-def get_pressed():
-	for event in pg.event.get():
-		match event.type:
-			case pg.QUIT:
-				exit_game()
-			case pg.MOUSEBUTTONDOWN:
-				match event.button:
-					case 1:
-						ButtonsInfo.LMB = True
-					case 3:
-						ButtonsInfo.RMB = True
-			case pg.KEYDOWN:
-				match event.key:
-					case pg.K_w:
-						ButtonsInfo.W = True
-					case pg.K_a:
-						ButtonsInfo.A = True
-					case pg.K_s:
-						ButtonsInfo.S = True
-					case pg.K_d:
-						ButtonsInfo.D = True
-			case pg.MOUSEBUTTONUP:
-				match event.button:
-					case 1:
-						ButtonsInfo.LMB = False
-					case 3:
-						ButtonsInfo.RMB = False
-			case pg.KEYUP:
-				match event.key:
-					case pg.K_w:
-						ButtonsInfo.W = False
-					case pg.K_a:
-						ButtonsInfo.A = False
-					case pg.K_s:
-						ButtonsInfo.S = False
-					case pg.K_d:
-						ButtonsInfo.D = False
-
-
 def render_world(sc, offset):
 	"""
 	
@@ -65,17 +26,34 @@ def render_world(sc, offset):
 				sc,
 				offset,
 			)
-		pg.draw.rect(
-			sc,
-			(255, 0, 0),
-			[
-				chunk.ax - offset[0],
-				chunk.az - offset[1],
-				WorldMap.chunk_size * Sets.square_size,
-				WorldMap.chunk_size * Sets.square_size,
-			],
-			1
-		)
+		# pg.draw.rect(
+		# 	sc,
+		# 	(255, 0, 0),
+		# 	[
+		# 		chunk.ax - offset[0],
+		# 		chunk.az - offset[1],
+		# 		WorldMap.chunk_size * Sets.square_size,
+		# 		WorldMap.chunk_size * Sets.square_size,
+		# 	],
+		# 	1
+		# )
+
+
+def scope_camera(sc, k) -> None:
+	"""
+	:param sc: Surface
+	:param k: scope koof
+	:return: None
+	"""
+	if k < 0:
+		return
+	sc.blit(
+		source=pg.transform.scale_by(sc, k),
+		dest=(
+			(1 - k) * Sets.Sc.h_width,
+			(1 - k) * Sets.Sc.h_height,
+		),
+	)
 
 
 def render_selected_rect(pos, color, sc, offset):

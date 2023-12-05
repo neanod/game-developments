@@ -1,32 +1,29 @@
 import os
 import subprocess
 import webbrowser
-import time
-import openai
 import requests
 import tldextract
+import time
+import openai
+from speech_tools.audio_get import get_audio
+from keyboard import is_pressed
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from keyboard import is_pressed
-from gpt_instruments import GPT
-from speech_tools.speech_to_text import speech_to_text
+# from gpt_instruments import GPT
+from gpt_instruments_local import GPT
+from speech_tools.alternate_speech_to_text import speech_to_text
 from image_generator import generate as generate_image
 from speech_tools.text_to_speech import stream_and_play
-from speech_tools.audio_get import get_audio
 from get_token import google_token
 
 
 class Jarvis(GPT):
-	def __init__(self, assist=None, model=None):
+	def __init__(self, assist=None):
 		if assist is None:
 			self.assist_text = "You are helpful bot"
 		else:
 			self.assist_text = assist
-		if model is None:
-			self.model = 'gpt-3.5-turbo'
-		else:
-			self.model = model
-		GPT.__init__(self, assist, model)
+		GPT.__init__(self, assist)
 	
 	@staticmethod
 	def restart():
@@ -94,8 +91,7 @@ class Jarvis(GPT):
 		for com in cmd_commands:
 			if com.output:
 				try:
-					out = subprocess.run(com.text, shell=True, capture_output=True,
-					                     text=True).stdout
+					out = subprocess.run(com.text, shell=True, capture_output=True, text=True).stdout
 					if out:
 						print(f"CMD OUTPUT:\n{out}")
 				except Exception as e:
@@ -136,23 +132,22 @@ class Jarvis(GPT):
 	def get_upgraded_response(self, text):
 		if text:
 			return self.upgrade_response(self.get_response(text))
-		else:
-			return False
+		return False
 	
 	def parse_with_parvis(self, query: str, question: str):
 		# site variants
 		search_results = self.get_search_results(query)
 		# print(f"{search_results=}")
+		assist = 'Ты Parvis, ты создан чтобы искать информацию на сайтах.\n'
+		'Если на сайте нет информации пиши в ответ: NO_INFORMATION\n'
+		'Ты должен отвечать Джарвису так:\n'
+		'This is information, you browsed - ... or NO_INFORMATION. use this information to '
+		'respond to the user.\n\n'
+		'Тебе будет дана информация в виде:\n'
+		'ТЕКСТ_ВОПРОСА\n'
+		'Site:\nHTML_WITHOUT_TAGS',
 		PARVIS = GPT(
-			assist='Ты Parvis, ты создан чтобы искать информацию на сайтах.\n'
-			       'Если на сайте нет информации пиши в ответ: NO_INFORMATION\n'
-			       'Ты должен отвечать Джарвису так:\n'
-			       'This is information, you browsed - ... or NO_INFORMATION. use this information to '
-			       'respond to the user.\n\n'
-			       'Тебе будет дана информация в виде:\n'
-			       'ТЕКСТ_ВОПРОСА\n'
-			       'Site:\nHTML_WITHOUT_TAGS',
-			model='gpt-3.5-turbo-16k',
+			assist=assist*Settings.accept_assist,
 		)
 		# parse sites and return result to jarvis as "this is information, you browsed -  "...""
 		for search_result in search_results['items']:
@@ -201,9 +196,11 @@ class Settings:
 	jarvis_works_path = 'C:\\jarvis_works\\'
 	secret_key = 'f13'
 	clear_key = 'f8'
-	use_PARVIS = True
 	cx = "8255d5ccd353d4ae2"
 	g_token = google_token()
+	
+	accept_assist = False
+	use_PARVIS = False
 	use_voice = False
 	
 	# debug

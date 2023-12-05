@@ -1,11 +1,14 @@
-from math import dist
-from matan import get_color
-import pygame
-from sets import Sets
+import random
+from matan import get_color, exit_game, Vec2
+import pygame as pg
+from sets import Sets, ButtonsInfo
 import heapq
+from numpy import sin, cos
+from enemy import Enemy
 
 
 class Camera:
+	scope: float = 1
 	pos = list(Sets.Sc.center.copy())
 
 
@@ -32,7 +35,7 @@ def camera_logic(camera_pos, player_pos, t) -> list[int, int]:
 	Do world-gen logic
 	:type t: int
 	:type camera_pos: list[int, int]
-	:type player_pos: list[int, int]
+	:type player_pos: tuple[int, int]
 	:return None
 	"""
 	
@@ -128,11 +131,30 @@ def world_post_gen(x_pos, z_pos) -> None:
 	:type z_pos: int
 	:type x_pos: int
 	"""
-	h = (Sets.noise([x_pos / Sets.period, z_pos / Sets.period]) + 0.5 * Sets.amp)
+	h = get_block_at(x_pos, z_pos)
 	WorldMap.land_map[(x_pos, z_pos)] = h
+	if h < Sets.water_level:
+		WorldMap.land_colliding.append(
+			pg.Rect(
+				x_pos * Sets.square_size,
+				z_pos * Sets.square_size,
+				Sets.square_size,
+				Sets.square_size
+			)
+		)
 	# update image of chunk, where block is placed
 	cposx: int = x_pos // WorldMap.chunk_size
 	cposz: int = z_pos // WorldMap.chunk_size
+	if not random.randint(0, int(1 / Sets.enemy_spawn_chance) - 1) and h > Sets.water_level:
+		EnemyList.enemies.append(
+			Enemy(
+				x=x_pos * Sets.square_size,
+				y=z_pos * Sets.square_size,
+				world_map=WorldMap.land_map,
+				path_find_f=find_path_a_star,
+				speed_def=5,
+			)
+		)
 	for c in WorldMap.chunks:
 		if c.cx == cposx and c.cz == cposz:
 			c.add_block(x_pos, z_pos, h)
@@ -162,7 +184,7 @@ class WorldChunk:
 		"""
 		self.ax = cx * Sets.square_size * WorldMap.chunk_size
 		self.az = cz * Sets.square_size * WorldMap.chunk_size
-		self.rect = pygame.Rect(
+		self.rect = pg.Rect(
 			self.ax,
 			self.az,
 			*WorldMap.size,
@@ -170,7 +192,7 @@ class WorldChunk:
 		
 		self.cx = cx
 		self.cz = cz
-		self.sc = pygame.Surface(
+		self.sc = pg.Surface(
 			size=(
 				WorldMap.chunk_size * Sets.square_size,
 				WorldMap.chunk_size * Sets.square_size,
@@ -188,7 +210,7 @@ class WorldChunk:
 		"""
 		
 		color = self.get_color(height) if force is None else force
-		rad: int = Sets.square_size // 2
+		rad: int = Sets.square_size
 		
 		if height <= Sets.water_level:
 			self.sc.fill(
@@ -223,32 +245,31 @@ class WorldChunk:
 			if (delta[0] + _x, delta[1] + _y) in WorldMap.land_map.keys():
 				neighbour.append(WorldMap.land_map[delta[0] + _x, delta[1] + _y] > Sets.water_level)
 			else:
-				neighbour.append((Sets.noise([(delta[0] + _x) / Sets.period,
-				                              (delta[1] + _y) / Sets.period]) + 0.5 * Sets.amp) > Sets.water_level)
+				neighbour.append(get_block_at(delta[0] + _x, delta[1] + _y) > Sets.water_level)
 		
 		match neighbour:
 			case [0, 0, 0, 0]:
 				args = rad,
 			case [1, 0, 0, 0]:
-				args = -1, 0, 0, rad, rad
+				args = 0, 0, 0, rad, rad
 			case [0, 1, 0, 0]:
-				args = -1, rad, 0, rad, 0
+				args = 0, rad, 0, rad, 0
 			case [0, 0, 1, 0]:
-				args = -1, rad, rad, -1, 0
+				args = 0, rad, rad, 0, 0
 			case [0, 0, 0, 1]:
-				args = -1, 0, rad, 0, rad
+				args = 0, 0, rad, 0, rad
 			case [1, 1, 0, 0]:
-				args = -1, 0, 0, rad, 0
+				args = 0, 0, 0, rad, 0
 			case [0, 1, 1, 0]:
-				args = -1, rad, 0, 0, 0
+				args = 0, rad, 0, 0, 0
 			case [0, 0, 1, 1]:
-				args = -1, 0, rad, 0, 0
+				args = 0, 0, rad, 0, 0
 			case [1, 0, 0, 1]:
-				args = -1, 0, 0, 0, rad
-			case [1, 1, 1, 1] | [0, 1, 1, 1] | [1, 0, 1, 1] | [1, 1, 0, 1] | [1, 1, 1, 0] | [1, 0, 1, 0] | [0, 1, 0, 1]:
+				args = 0, 0, 0, 0, rad
+			case _:  # [1, 1, 1, 1] | [0, 1, 1, 1] | [1, 0, 1, 1] | [1, 1, 0, 1] | [1, 1, 1, 0] | [1, 0, 1, 0] | [0, 1, 0, 1]:
 				args = ()
 		
-		pygame.draw.rect(
+		pg.draw.rect(
 			self.sc,
 			color,
 			[
@@ -258,8 +279,7 @@ class WorldChunk:
 				Sets.square_size,
 			],
 			0,
-			*args
-		
+			*args,
 		)
 	
 	@property
@@ -273,8 +293,8 @@ class WorldChunk:
 	def get_a_pos(self) -> tuple[int, int]:
 		return self.ax, self.az
 	
-	def get_rect(self) -> pygame.Rect:
-		return pygame.Rect(
+	def get_rect(self) -> pg.Rect:
+		return pg.Rect(
 			[
 				self.ax,
 				self.az,
@@ -283,7 +303,7 @@ class WorldChunk:
 			]
 		)
 	
-	def render_to_source(self, source: pygame.Surface, _offset: tuple[int, int]):
+	def render_to_source(self, source: pg.Surface, _offset: tuple[int, int]):
 		source.blit(
 			source=self.sc,
 			dest=(
@@ -293,37 +313,73 @@ class WorldChunk:
 		)
 
 
+def get_pressed():
+	for event in pg.event.get():
+		match event.type:
+			case pg.QUIT:
+				exit_game()
+			case pg.MOUSEBUTTONDOWN:
+				match event.button:
+					case 1:
+						ButtonsInfo.LMB = True
+					case 3:
+						ButtonsInfo.RMB = True
+			case pg.KEYDOWN:
+				match event.key:
+					case pg.K_w:
+						ButtonsInfo.W = True
+					case pg.K_a:
+						ButtonsInfo.A = True
+					case pg.K_s:
+						ButtonsInfo.S = True
+					case pg.K_d:
+						ButtonsInfo.D = True
+			case pg.MOUSEBUTTONUP:
+				match event.button:
+					case 1:
+						ButtonsInfo.LMB = False
+					case 3:
+						ButtonsInfo.RMB = False
+			case pg.KEYUP:
+				match event.key:
+					case pg.K_w:
+						ButtonsInfo.W = False
+					case pg.K_a:
+						ButtonsInfo.A = False
+					case pg.K_s:
+						ButtonsInfo.S = False
+					case pg.K_d:
+						ButtonsInfo.D = False
+			case pg.MOUSEWHEEL:
+				ButtonsInfo.mwheel += event.precise_y
+
+
+def get_block_at(x: int, z: int) -> float:
+	"""
+	Get height of the block by pos. WARN: Pos + screen_center
+	:param x: x pos in B sys
+	:param z: y pos in B sys
+	:return: height
+	"""
+	x -= Sets.Sc.h_width // Sets.square_size
+	z -= Sets.Sc.h_height // Sets.square_size
+	
+	# return hypot(x, 1000 / (z + 0.0001)) * 0.02
+	return Sets.water_level + 0.1 if sin((x + 8) / 15) * cos(z / 10) > -0.2 else Sets.water_level - 0.1
+
+
 class WorldMap:
-	chunk_size = 1024
+	chunk_size = 512
 	chunks: list[WorldChunk] = list()
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
 	to_gen: list = list()
 	land_map: dict = dict()
+	land_colliding: list[Vec2] = list()
 
 
-offset = 30, 30
-size = WorldMap.size
-center = (Sets.Sc.h_width // Sets.square_size, Sets.Sc.h_height // Sets.square_size)
-if Sets.spawn_zone:
-	for x in range(-offset[0], size[0] + offset[0]):
-		for z in range(-offset[1], size[1] + 1 + offset[1]):
-			if dist((x, z), center) < Sets.spawn_zone:
-				minim = Sets.water_level
-				lvl = (1 - dist((x, z), center) / Sets.spawn_zone) / 3 * (Sets.amp - minim) + minim
-				WorldMap.land_map[x, z] = lvl
-				for ch in WorldMap.chunks:
-					if ch.bpos == (x, z):
-						ch.add_block(x, z, height=None, force=lvl)
-						break
-				else:
-					s = WorldMap.chunk_size * Sets.square_size
-					WorldMap.chunks.append(WorldChunk(
-						x % WorldMap.chunk_size,
-						z % WorldMap.chunk_size,
-						get_color,
-					))
-			else:
-				world_post_gen(x, z)
+class EnemyList:
+	enemies: list[Enemy] = list()
+
 
 if __name__ == '__main__':
 	input("Это не основной файл. Откройте IslandCapture.py")

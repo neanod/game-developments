@@ -1,3 +1,5 @@
+from math import dist
+
 from perlin_noise import PerlinNoise
 from random import randint
 import pygame as pg
@@ -12,6 +14,7 @@ class ButtonsInfo:
 	D = False
 	
 	m_pos: tuple[int, int] = 0, 0
+	mwheel: int = 0
 
 
 class Sets:
@@ -19,22 +22,23 @@ class Sets:
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
 	square_size: int = 15
 	matching: bool = True
+	enemy_spawn_chance = 0.0003
 	
 	spawn_zone: float = 0
 	
 	gen_dist: int = 10
 	seed = randint(
-			10000,
-			1000000
+			100000000,
+			999999999
 	)
-	# noise: PerlinNoise = PerlinNoise(
-	# 	octaves=5,
-	# 	seed=seed,
-	# )
 	noise: PerlinNoise = PerlinNoise(
-		octaves=12,
+		octaves=5,
 		seed=seed,
 	)
+	# noise: PerlinNoise = PerlinNoise(
+	# 	octaves=12,
+	# 	seed=seed,
+	# )
 	period: float = 2500 / square_size
 	amp: float = 2
 	water_level: float = 1.2
@@ -48,7 +52,7 @@ class Sets:
 		h_height: int = height // 2
 		center: list[int, int] = [h_width, h_height]
 		
-		cam_to_player_box_size: list[int, int] = [h_width // 2, h_height // 2]
+		cam_to_player_box_size: list[int, int] = [h_width // 4, h_height // 4]
 		cam_to_player_box: pg.Rect = pg.Rect(
 			[
 				h_width - cam_to_player_box_size[0] * 0.5,
@@ -58,8 +62,11 @@ class Sets:
 		)
 		
 	class II:
-		a_star_min = 40
-		a_star_max = 200
+		a_star_min = 70
+		a_star_max = 800
+		
+		# max distance between end point of way and target
+		delta_offset_f = lambda __p, __q: dist(__p.xy, __q.xy) > 80
 	
 
 class SelectedInfo:
