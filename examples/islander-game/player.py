@@ -1,11 +1,12 @@
-from math import sqrt
-from matan import Vec2
+from math import sqrt, dist
+from matan import Vec2, clamp
 from sets import Sets
-from pygame import draw, Surface, Rect
+import pygame as pg
+from enemy import Drop
 
 
 class Player:
-	def __init__(self, x=None, y=None, color=None, speed_def=None, facing=None) -> None:
+	def __init__(self, x=None, y=None, color=None, speed_def=None, facing=None, land=None) -> None:
 		"""
 		:type x: int | float
 		:type y: int | float
@@ -14,21 +15,30 @@ class Player:
 		:type facing: str
 		:param facing: up, up-right, right, down-right, down, down-left, left, up-left
 		"""
+		self.score = 0
+		self.land = land
+		self.font = 'arial'
+		self.sword_texture = None
 		if color is None:
 			color = 255, 255, 255
-		p = x, y
 		if x is None or y is None:
 			p = Sets.Sc.center
 		if speed_def is None:
 			speed_def = 12
 		if facing is None:
 			facing = 'up'
+		if land is None:
+			raise ValueError("Player initialised without worldmap")
+		p = x, y
+		self.land = land
 		self.color = color
 		self.pos = Vec2(p)
 		self.speed_def = speed_def
 		self.speed = speed_def
 		self.facing = facing
 		self.sq2 = sqrt(2) / 2
+		self.sword_angle = .0
+		self.show_sword = True
 	
 	@property
 	def speed_x(self):
@@ -50,8 +60,7 @@ class Player:
 			case 'up-left':
 				return -self.speed * self.sq2
 			case _:
-				print(f"invalid player angle \"{self.facing}\"")
-				raise ValueError
+				raise ValueError(f"invalid player angle \"{self.facing}\"")
 	
 	@property
 	def speed_y(self):
@@ -85,20 +94,33 @@ class Player:
 	def y(self) -> int | float:
 		return self.pos.y
 	
-	def render(self, sc: Surface, offset):
-		if not self.pos:
-			print("FUC@#CDEFF")
-			return
-		draw.circle(
+	def render(self, sc: pg.Surface, offset):
+		pg.draw.circle(
 			surface=sc,
 			color=self.color,
 			center=self.pos - offset,
 			radius=Sets.square_size // 1.5,
 			width=5,
 		)
+		if self.sword_texture is None:
+			self.sword_texture = pg.transform.scale(
+				pg.image.load('texture/sword.png').convert_alpha(),
+				[
+					Sets.square_size * 2,
+					Sets.square_size * 8,
+				]
+			)
+		
+	def post_render(self, sc: pg.Surface):
+		if isinstance(self.font, str):
+			self.font = pg.font.Font(f'fonts/{self.font}.ttf', size=clamp(Sets.square_size, 40, 50))
+		src = self.font.render(f"Score: {self.score}", True, (155, 255, 255))
+		sc.blit(src, [0, 0])
 	
-	def logic(self, colliding: list[Rect]):
-		rect = Rect(
+	def logic(self, colliding: list[Drop]):
+		if None in self.pos.xy:
+			self.pos = Vec2(Sets.Sc.center)
+		rect = pg.Rect(
 			self.x + self.speed_x - Sets.square_size // 1.5,
 			self.y + self.speed_y - Sets.square_size // 1.5,
 			Sets.square_size // 1.5 * 2,
@@ -108,6 +130,12 @@ class Player:
 			if rect.colliderect(coll):
 				return
 		self.pos += self.speed_dim
+		
+		money: Drop
+		for money in self.land.drop_list:
+			if dist(money.center, self.pos.xy) < Sets.square_size * 2:
+				self.score += money.value
+				money.death()
 
 
 def main():

@@ -80,11 +80,21 @@ class Vec2:
 		return self
 	
 	def __add__(self, other) -> tuple:
-		return self.x + other[0], self.y + other[1]
+		if isinstance(other, type(self)):
+			return self.x + other.x, self.y + other.y
+		elif isinstance(other, (int, float)):
+			return self.x + other, self.y + other
+		elif isinstance(other, (tuple, list)):
+			return self.x + other[0], self.y + other[1]
 	
 	def __sub__(self, other) -> tuple:
-		return self.x - other[0], self.y - other[1]
-	
+		if isinstance(other, type(self)):
+			return self.x - other.x, self.y - other.y
+		elif isinstance(other, (int, float)):
+			return self.x - other, self.y - other
+		elif isinstance(other, (tuple, list)):
+			return self.x - other[0], self.y - other[1]
+		
 	def __mul__(self, other) -> ndarray | tuple:
 		if isinstance(other, (int, float)):
 			return self.x * other, self.y * other

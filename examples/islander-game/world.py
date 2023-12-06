@@ -4,7 +4,7 @@ import pygame as pg
 from sets import Sets, ButtonsInfo
 import heapq
 from numpy import sin, cos
-from enemy import Enemy
+from enemy import Enemy, Drop
 
 
 class Camera:
@@ -29,16 +29,18 @@ def heuristic_cost_estimate(pos, goal) -> float:
 	return (abs(x1 - x2) ** n + abs(y1 - y2) ** n) ** (1 / n)
 
 
-def camera_logic(camera_pos, player_pos, t) -> list[int, int]:
+def camera_logic(camera_pos, player_pos, t, sc) -> list[int, int]:
 	"""
 	Returns clamped camera pos.
 	Do world-gen logic
+	:param sc: screen
 	:type t: int
 	:type camera_pos: list[int, int]
 	:type player_pos: tuple[int, int]
 	:return None
 	"""
-	
+	if None in player_pos:
+		return Sets.Sc.center
 	camera_pos = [
 		clamp(
 			camera_pos[0],
@@ -66,7 +68,7 @@ def camera_logic(camera_pos, player_pos, t) -> list[int, int]:
 			if (x_temp, z_temp) not in world_keys:
 				# if (x_temp, z_temp) not in WorldMap.to_gen:
 				# 	WorldMap.to_gen.append((x_temp, z_temp))
-				world_post_gen(x_temp, z_temp)
+				world_post_gen(x_temp, z_temp, sc)
 	return camera_pos
 
 
@@ -126,8 +128,20 @@ def clamp_color_channel(_x) -> int:
 	return max(0, min(255, _x))
 
 
-def world_post_gen(x_pos, z_pos) -> None:
+def pre_world_gen(sc) -> None:
 	"""
+	World gen in big rectangle previous starting game
+	:return: nothing
+	"""
+	bound = 50
+	for x in range(-bound, Sets.Sc.width // Sets.square_size + bound):
+		for z in range(-bound, Sets.Sc.height // Sets.square_size + bound):
+			world_post_gen(x, z, sc)
+
+
+def world_post_gen(x_pos, z_pos, sc) -> None:
+	"""
+	:param sc: screen
 	:type z_pos: int
 	:type x_pos: int
 	"""
@@ -148,11 +162,14 @@ def world_post_gen(x_pos, z_pos) -> None:
 	if not random.randint(0, int(1 / Sets.enemy_spawn_chance) - 1) and h > Sets.water_level:
 		EnemyList.enemies.append(
 			Enemy(
+				sc=sc,
 				x=x_pos * Sets.square_size,
 				y=z_pos * Sets.square_size,
 				world_map=WorldMap.land_map,
 				path_find_f=find_path_a_star,
 				speed_def=5,
+				all_enemies=EnemyList.enemies,
+				list_to_drop=WorldMap.drop_list,
 			)
 		)
 	for c in WorldMap.chunks:
@@ -365,7 +382,7 @@ def get_block_at(x: int, z: int) -> float:
 	z -= Sets.Sc.h_height // Sets.square_size
 	
 	# return hypot(x, 1000 / (z + 0.0001)) * 0.02
-	return Sets.water_level + 0.1 if sin((x + 8) / 15) * cos(z / 10) > -0.2 else Sets.water_level - 0.1
+	return sin((x + 8) / 15) * cos(z / 10) + 0.2 + Sets.water_level
 
 
 class WorldMap:
@@ -374,8 +391,9 @@ class WorldMap:
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
 	to_gen: list = list()
 	land_map: dict = dict()
+	drop_list: list[Drop] = list()
 	land_colliding: list[Vec2] = list()
-
+	
 
 class EnemyList:
 	enemies: list[Enemy] = list()

@@ -13,19 +13,21 @@ def render_world(sc, offset):
 	:type offset: list[int, int] | tuple[int, int]
 	:return: None
 	"""
-	a_screen_rect = pg.Rect((
+	screen_rect = pg.Rect((
 		offset[0],
 		offset[1],
-		Sets.Sc.width,
-		Sets.Sc.height,
+		*Sets.Sc.res,
 	))
 	
 	for chunk in WorldMap.chunks:
-		if chunk.get_rect().colliderect(a_screen_rect):
+		if chunk.get_rect().colliderect(screen_rect):
 			chunk.render_to_source(
 				sc,
 				offset,
 			)
+	for drop in WorldMap.drop_list:
+		if screen_rect.collidepoint(drop.xy):
+			drop.render(offset=offset)
 		# pg.draw.rect(
 		# 	sc,
 		# 	(255, 0, 0),

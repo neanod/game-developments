@@ -1,13 +1,12 @@
 from pygame import Surface
 from render import *
-from matan import get_camera_offset, clamp, Vec2
-from world import camera_logic, Camera, world_post_gen, get_pressed, EnemyList
+from matan import get_camera_offset, clamp
+from world import camera_logic, Camera, world_post_gen, get_pressed, EnemyList, WorldMap, pre_world_gen
 from player import Player
 
-PLAYER = Player()
 
-
-post_gen = lambda gen_per_tick: [world_post_gen(*WorldMap.to_gen[i]) for i in range(gen_per_tick)]
+PLAYER = Player(land=WorldMap)
+# TODO: сделать шобы игрок был с мечом которым нада махат
 
 
 def pressed_logic():
@@ -44,40 +43,39 @@ def pressed_logic():
 					PLAYER.facing = 'down-right'
 				case (False, True, True, False):
 					PLAYER.facing = 'down-left'
-			# (True, True, False, False) | (True, False, False, True) | (False, False, True, True) | (False, True, True, False)
-	
+		# (True, True, False, False) | (True, False, False, True) | (False, False, True, True) | (False, True, True, False)
+
 
 def main():
 	pg.init()
 	sc: Surface = pg.display.set_mode(Sets.Sc.res)
+	post_gen = lambda rate: [world_post_gen(*WorldMap.to_gen[i]) for i in range(rate)]
 	pg.display.set_caption("Island Capture.")
 	clock = pg.time.Clock()
+	gen_per_tick = 500
+	running = True
+	pre_world_gen(sc)
+	
+	def logic(t):
+		get_pressed()
+		pressed_logic()
+		get_clicked(get_camera_offset(Camera.pos))
+		Camera.pos = camera_logic(Camera.pos, PLAYER.pos.xy, t, sc)
+		gen_need = min(gen_per_tick, len(WorldMap.to_gen))
+		post_gen(gen_need)
+		WorldMap.to_gen = WorldMap.to_gen[gen_need:]
+		PLAYER.logic(WorldMap.land_colliding)
+		[x.logic(PLAYER.pos) for x in EnemyList.enemies]
+		if not t % Sets.FPS:
+			pg.display.set_caption(f"Island Capture. FPS: {round(clock.get_fps(), 1)}; "
+			                       f"FT: {clock.get_time()}")
 	
 	def game():
-		"""
-		return None
-		"""
-		gen_per_tick = 500
-		running = True
 		t = 0
-		def logic():
-			get_pressed()
-			pressed_logic()
-			get_clicked(get_camera_offset(Camera.pos))
-			Camera.pos = camera_logic(Camera.pos, PLAYER.pos.xy, t)
-			gen_need = min(gen_per_tick, len(WorldMap.to_gen))
-			post_gen(gen_need)
-			WorldMap.to_gen = WorldMap.to_gen[gen_need:]
-			PLAYER.logic(WorldMap.land_colliding)
-			[x.logic(PLAYER.pos) for x in EnemyList.enemies]
 		while running:
 			"""LOGIC"""
-			logic()
+			logic(t)
 			camera_offset = get_camera_offset(Camera.pos)
-			"""
-			Спавн врагов
-			Стройка мостов на R
-			"""
 			"""RENDER"""
 			render_world(sc, camera_offset)
 			PLAYER.render(sc, camera_offset)
@@ -85,11 +83,9 @@ def main():
 			draw_path(sc, camera_offset)
 			draw_selected(sc, camera_offset)
 			scope_camera(sc, Camera.scope)
+			PLAYER.post_render(sc)
 			pg.display.update()
 			clock.tick(Sets.FPS)
-			if not t % Sets.FPS:
-				pg.display.set_caption(f"Island Capture. FPS: {round(clock.get_fps(), 1)}; "
-				                       f"FT: {clock.get_time()}")
 			t += 1
 	
 	game()
