@@ -182,7 +182,6 @@ class Enemy:
 				)
 	
 	def logic(self, target: Vec2 = None):
-		self.hp -= 0.5  # Temp
 		if self.hp <= 0:
 			self.death()
 		self.hp_bar.set_current_progress(self.hp / self.max_hp * 100)

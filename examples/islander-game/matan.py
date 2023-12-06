@@ -1,5 +1,5 @@
 from sets import Sets
-from math import hypot
+from math import sqrt, hypot, pi, atan2
 from numpy import cross, ndarray
 import pygame as pg
 
@@ -49,6 +49,29 @@ def exit_game():
 	quit(0)
 
 
+def collisionCircleLine(circle, line):
+	side1 = sqrt((circle['x'] - line['p1']['x']) ** 2 + (circle['y'] - line['p1']['y']) ** 2)
+	side2 = sqrt((circle['x'] - line['p2']['x']) ** 2 + (circle['y'] - line['p2']['y']) ** 2)
+	base = sqrt((line['p2']['x'] - line['p1']['x']) ** 2 + (line['p2']['y'] - line['p1']['y']) ** 2)
+	
+	if circle['radius'] > side1 or circle['radius'] > side2:
+		return True
+	
+	angle1 = atan2(line['p2']['x'] - line['p1']['x'], line['p2']['y'] - line['p1']['y']) - atan2(
+		circle['x'] - line['p1']['x'], circle['y'] - line['p1']['y'])
+	angle2 = atan2(line['p1']['x'] - line['p2']['x'], line['p1']['y'] - line['p2']['y']) - atan2(
+		circle['x'] - line['p2']['x'], circle['y'] - line['p2']['y'])
+	
+	if angle1 > pi / 2 or angle2 > pi / 2:
+		return False
+	
+	semiperimeter = (side1 + side2 + base) / 2
+	areaOfTriangle = sqrt(semiperimeter * (semiperimeter - side1) * (semiperimeter - side2) * (semiperimeter - base))
+	height = 2 * areaOfTriangle / base
+	
+	return height < circle['radius']
+
+
 class Vec2:
 	def __init__(self, xy):
 		"""
@@ -94,7 +117,7 @@ class Vec2:
 			return self.x - other, self.y - other
 		elif isinstance(other, (tuple, list)):
 			return self.x - other[0], self.y - other[1]
-		
+	
 	def __mul__(self, other) -> ndarray | tuple:
 		if isinstance(other, (int, float)):
 			return self.x * other, self.y * other
@@ -120,4 +143,21 @@ class Vec2:
 	@property
 	def xy(self):
 		return self.x, self.y
+
+
+if __name__ == '__main__':
+	def test_collisionCircleLine():
+		circle = {'x': 0, 'y': 0, 'radius': 1}
+		line = {'p1': {'x': -1, 'y': -1}, 'p2': {'x': 1, 'y': 1}}
+		
+		assert collisionCircleLine(circle, line) == True
+		
+		circle = {'x': 0, 'y': 0, 'radius': 1}
+		line = {'p1': {'x': -2, 'y': -2}, 'p2': {'x': 2, 'y': 2}}
+		
+		assert collisionCircleLine(circle, line) == False
+		
+		print("All tests passed.")
 	
+	
+	test_collisionCircleLine()
