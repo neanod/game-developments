@@ -1,6 +1,6 @@
 from pygame import Surface
 from render import *
-from matan import get_camera_offset, clamp
+from matan import get_camera_offset, clamp, Vec2
 from world import camera_logic, Camera, world_post_gen, get_pressed, EnemyList, WorldMap, pre_world_gen
 from player import Player
 import pygame_gui
@@ -55,6 +55,7 @@ def main():
 	gen_per_tick = 500
 	running = True
 	pre_world_gen(sc)
+	PLAYER.manager = pygame_gui.UIManager(Sets.Sc.res)
 	PLAYER.hp_bar = pygame_gui.elements.UIProgressBar(
 			relative_rect=PLAYER.RenderProperties.hp_bar_relative,
 			manager=PLAYER.manager
@@ -67,7 +68,6 @@ def main():
 	def logic(t):
 		get_pressed()
 		pressed_logic()
-		# get_clicked(get_camera_offset(Camera.pos))
 		Camera.pos = camera_logic(Camera.pos, PLAYER.pos.xy, t, sc)
 		gen_need = min(gen_per_tick, len(WorldMap.to_gen))
 		post_gen(gen_need)
@@ -79,6 +79,8 @@ def main():
 	
 	def game():
 		t = 0
+		PLAYER.pos = Vec2(Sets.Sc.center)
+		PLAYER.go_to_nearest_block()
 		while running:
 			"""LOGIC"""
 			logic(t)
@@ -87,8 +89,6 @@ def main():
 			render_world(sc, camera_offset)
 			PLAYER.render(sc, camera_offset)
 			[x.render(sc, camera_offset) for x in EnemyList.enemies]
-			# draw_path(sc, camera_offset)
-			# draw_selected(sc, camera_offset)
 			scope_camera(sc, Camera.scope)
 			PLAYER.post_render(sc)
 			pg.display.update()

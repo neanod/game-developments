@@ -55,7 +55,7 @@ class Enemy:
 		
 		class RP:
 			hp_bar_relative = Rect((0, 0), (7 * Sets.square_size, 1.5 * Sets.square_size))
-			draw_path = False
+			draw_path = True
 			hp_bar_offset = Vec2((-hp_bar_relative.width * 0.5, -Sets.square_size * 2.5))
 
 		if list_to_drop is None:
@@ -144,13 +144,16 @@ class Enemy:
 	def bpos(self) -> tuple[int, int]:
 		return int(self.x // Sets.square_size), int(self.y // Sets.square_size)
 	
-	def update_path(self, target: Vec2) -> None:
+	def reconstruct_path(self, target: Vec2) -> None:
 		"""
 		Updates the path to player or any other target you want
 		:param target: target pos in vector
 		:return: None
 		"""
 		self.path = self.find_path(self.bpos(), target // Sets.square_size, world_map=self.world_map)
+		if self.path is None:
+			self.path = []
+		return not not self.path
 		
 	def death(self):
 		self.enemy_list.remove(self)
@@ -190,26 +193,27 @@ class Enemy:
 			d = dist(self.xy, target.xy)
 			if d < Sets.II.a_star_max:
 				self.speed = self.speed_def
-				if self.speed_def + 1 < d < Sets.II.a_star_min:
-					self.rangle = -atan2(*(self.pos - target.xy))
-					self.path = list()
-				else:
-					if Sets.II.delta_offset_f(self, target):
-						# reconstruct path
-						self.update_path(target=target)
-					# angle calc
-					if self.path is None or len(self.path) < 2:
-						self.speed = 0
-						return
-					
-					to = Vec2(Vec2(self.path[1]) + (0.5, 0.5)) * Sets.square_size
-					if dist(self.xy, Vec2(self.path[0]) * Sets.square_size) < self.speed_def * 6:
-						self.path.pop(0)
-					
-					self.rangle = -atan2(*(self.pos - to))
+				# if self.speed_def + 1 < d < Sets.II.a_star_min:
+				# 	self.rangle = -atan2(*(self.pos - target.xy))
+				# 	self.path = list()
+				# else:
+
+				if self.path.__len__() == 0 or dist(self.path[-1], target // Sets.square_size) > 5:
+					self.reconstruct_path(target)
+				
+				# angle calc
+				if self.path is None or len(self.path) < 2:
+					self.speed = 0
+					return
+				
+				to = (self.path[1][0] + 0.5) * Sets.square_size, (self.path[1][1] + 0.5) * Sets.square_size
+				if dist(self.xy, Vec2(self.path[0]) * Sets.square_size) < self.speed_def * 6:
+					self.path.pop(0)
+				
+				self.rangle = -atan2(*(self.pos - to))
 			else:
 				self.speed = 0
-				self.path = list()
+				self.path: list[tuple] = list()
 		self.pos += self.speed_dim
 
 

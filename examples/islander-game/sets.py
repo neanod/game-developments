@@ -22,7 +22,7 @@ class Sets:
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
 	square_size: int = 15
 	matching: bool = True
-	enemy_spawn_chance = 0.0003
+	enemy_spawn_chance = 0.0008
 	
 	spawn_zone: float = 0
 	
@@ -63,7 +63,7 @@ class Sets:
 		
 	class II:
 		a_star_min = 70
-		a_star_max = 700
+		a_star_max = 1100
 		
 		# max distance between end point of way and target
 		delta_offset_f = lambda __p, __q: dist(__p.xy, __q.xy) > 100

@@ -1,4 +1,6 @@
 import random
+from math import dist
+
 from matan import get_color, exit_game, Vec2
 import pygame as pg
 from sets import Sets, ButtonsInfo
@@ -26,7 +28,8 @@ def heuristic_cost_estimate(pos, goal) -> float:
 	x1, y1 = pos
 	x2, y2 = goal
 	n = 1.6  # если делать по dist(pos, pos2) то получится хуже
-	return (abs(x1 - x2) ** n + abs(y1 - y2) ** n) ** (1 / n)
+	# return (abs(x1 - x2) ** n + abs(y1 - y2) ** n) ** (1 / n)
+	return dist(pos, goal) + random.randint(0, 100) / 10
 
 
 def camera_logic(camera_pos, player_pos, t, sc) -> list[int, int]:
@@ -112,8 +115,6 @@ def find_path_a_star(start_pos, end_pos, world_map):
 						f_score = tentative_g + heuristic_cost_estimate(neighbor, end_pos)
 						heapq.heappush(open_set, (f_score, neighbor))
 						came_from[neighbor] = current_pos
-	
-	return None
 
 
 def reconstruct_path(came_from, current_pos):
@@ -381,6 +382,7 @@ def get_block_at(x: int, z: int) -> float:
 	x -= Sets.Sc.h_width // Sets.square_size
 	z -= Sets.Sc.h_height // Sets.square_size
 	
+	# return Sets.noise([x / Sets.period, z / Sets.period]) + 0.5 * Sets.amp
 	# return hypot(x, 1000 / (z + 0.0001)) * 0.02
 	return sin((x + 8) / 15) * cos(z / 10) + 0.2 + Sets.water_level
 
