@@ -24,83 +24,39 @@ class ColorTheme:
 
 
 class Button:
-	def __init__(self, relative_rect: pg.Rect, theme: ColorTheme, text: str, function: FunctionType, font: pg.Font):
+	def __init__(
+			self,
+			relative_rect: pg.Rect,
+			theme: ColorTheme,
+			text: str,
+			function: FunctionType,
+			font: pg.Font,
+			pos: tuple[int, int]
+	):
+		pg.init()
 		self.relative_rect: pg.Rect = relative_rect
 		self.theme: ColorTheme = theme
 		self.text: str = text
 		self.func: FunctionType = function
 		self.font: pg.Font = font
-		
-		self.border_radius = 10
-		self.border_width = 3
-		self.padding_horisontal = 3
-		self.padding_vertical = 3
+		self.manager = pygame_gui.UIManager(Sets.Sc.res)
+		self.button = pygame_gui.elements.UIButton(
+			relative_rect=self.relative_rect,
+			text=self.text,
+			manager=self.manager,
+		)
+		self.pos = pos
 	
-	def render(self, sc: pg.Surface, offset: tuple[int, int]):
-		pg.draw.rect(
-			sc,
-			self.theme.fg,
-			self.get_real_rect(offset=offset),
-			border_radius=self.border_radius,
-		)
-		pg.draw.rect(
-			sc,
-			self.theme.fc,
-			self.get_real_rect(offset=offset),
-			width=self.border_width,
-			border_radius=self.border_radius,
-		)
-		text: pg.Surface = self.font.render(
-			self.text,
-			True,
-			self.theme.tc,
-			None,
-			self.relative_rect.width - self.padding_horisontal * 2
-		)
-		real_rect = self.get_real_rect(offset=offset)
-		sc.blit(
-			text,
-			[
-				real_rect[0] + self.padding_horisontal,
-				real_rect[1] + self.padding_vertical,
-			]
-		)
-	
-	def get_real_rect(self, offset: tuple[int, int]) -> pg.Rect:
-		return pg.Rect(
-			self.relative_rect[0] + offset[0],
-			self.relative_rect[1] + offset[1],
-			self.relative_rect.width,
-			self.relative_rect.height,
-		)
-	
-	def get_real_rect_with_padding(self, real_rect: pg.Rect) -> pg.Rect:
-		return pg.Rect(
-			real_rect[0] + self.padding_horisontal,
-			real_rect[1] + self.padding_vertical,
-			real_rect[2] - self.padding_horisontal * 2,
-			real_rect[3] - self.padding_vertical * 2,
-		)
+	def render(self, sc: pg.Surface, offset: tuple[int, int], delta_time: float):
+		self.button.set_position(Vec2(offset) + self.pos)
+		self.manager.update(delta_time)
+		self.manager.draw_ui(sc)
 
 
 class Cell(Button):
-	def __init__(self, relative_rect: pg.Rect, theme: ColorTheme, function: FunctionType, font: pg.Font):
-		super().__init__(relative_rect, theme, '', function, font)
-	
-	def render(self, sc: pg.Surface, offset: tuple[int, int]):
-		pg.draw.rect(
-			sc,
-			self.theme.fg,
-			self.get_real_rect(offset=offset),
-			border_radius=self.border_radius,
-		)
-		pg.draw.rect(
-			sc,
-			self.theme.fc,
-			self.get_real_rect(offset=offset),
-			width=self.border_width,
-			border_radius=self.border_radius,
-		)
+	def __init__(self, relative_rect: pg.Rect, theme: ColorTheme, function: FunctionType, font: pg.Font, pos: tuple[int, int]):
+		from random import choice
+		super().__init__(relative_rect, theme, choice('adfsgfhdghdsafdsgfrhtrd'), function, font, pos)
 		
 
 class ButtonMenu:
@@ -115,14 +71,55 @@ class ButtonMenu:
 	def render(self, sc, offset):
 		button: Button
 		for button in self.b_list:
-			button.render(sc, offset)
+			button.render(sc, offset, 1 / Sets.FPS)
 
 
 class CellMenu(ButtonMenu):
-	def __init__(self):
+	def __init__(self, left_top_pos: Vec2, distance_between_cells: int, cell_size: int, inventory_size: tuple[int, int], theme: ColorTheme):
 		super().__init__()
+		self.theme: ColorTheme = theme
+		for x in range(left_top_pos.x + distance_between_cells, left_top_pos.x + (cell_size + distance_between_cells) * inventory_size[0] + distance_between_cells - 1, (cell_size + distance_between_cells)):
+			for y in range(left_top_pos.y + distance_between_cells, left_top_pos.y + (cell_size + distance_between_cells) * inventory_size[1] + distance_between_cells - 1, (cell_size + distance_between_cells)):
+				self.b_list.append(
+					Cell(
+						relative_rect=pg.Rect(
+							0,
+							0,
+							cell_size,
+							cell_size,
+						),
+						theme=self.theme,
+						function=empty_f,
+						font=None,
+						pos=(x, y),
+					)
+				)
+		self.border_radius = int(Sets.square_size // 1.5)
+		self.relative_rect = pg.Rect(
+			0,
+			0,
+			(cell_size + distance_between_cells) * inventory_size[0] + self.border_radius,
+			(cell_size + distance_between_cells) * inventory_size[1] + self.border_radius,
+		)
+		self.rect_width = 5
 		
-
+	def render(self, sc, offset):
+		pg.draw.rect(
+			surface=sc,
+			color=self.theme.bg,
+			rect=self.relative_rect.move(*offset),
+			border_radius=self.border_radius,
+		)
+		pg.draw.rect(
+			surface=sc,
+			color=self.theme.tc,
+			rect=self.relative_rect.move(offset),
+			border_radius=self.border_radius,
+			width=self.rect_width,
+		)
+		super().render(sc, Vec2(offset) - 11)
+		
+		
 class Inventory:
 	def __init__(
 			self,
@@ -141,28 +138,17 @@ class Inventory:
 	):
 		self.theme = theme
 		self.font = font
-		self.menu = CellMenu()
-				
-		for x in range(left_top_pos.x + distance_between_cells, left_top_pos.x + (cell_size + distance_between_cells) * inventory_size[0] + distance_between_cells - 1, (cell_size + distance_between_cells)):
-			for y in range(left_top_pos.y + distance_between_cells, left_top_pos.y + (cell_size + distance_between_cells) * inventory_size[1] + distance_between_cells - 1, (cell_size + distance_between_cells)):
-				self.menu.b_list.append(
-					Cell(
-						relative_rect=pg.Rect(
-							x,
-							y,
-							cell_size,
-							cell_size,
-						),
-						theme=self.theme,
-						function=empty_f,
-						font=None,
-					)
-				)
-
+		self.menu = CellMenu(
+			left_top_pos=left_top_pos,
+			inventory_size=inventory_size,
+			cell_size=cell_size,
+			distance_between_cells=distance_between_cells,
+			theme=self.theme,
+		)
+		
 
 class Player:
-	def __init__(self, x=None, y=None, color=None, speed_def=None, facing=None, land=None, enemy_list=None,
-	             hp_max=100) -> None:
+	def __init__(self, x=None, y=None, color=None, speed_def=None, facing=None, land=None, enemy_list=None, hp_max=100) -> None:
 		"""
 		:type hp_max: int | float
 		:type x: int | float
@@ -172,22 +158,7 @@ class Player:
 		:type facing: str
 		:param facing: up, up-right, right, down-right, down, down-left, left, up-left
 		"""
-		
-		self.manager = None
-		self.max_hp = int(hp_max)
-		self.hp_bar = None
-		
-		class RP:
-			hp_bar_relative = pg.Rect((0, 0), (7 * Sets.square_size, 1.5 * Sets.square_size))
-			draw_path = False
-			hp_bar_offset = Vec2((-hp_bar_relative.width * 0.5, -Sets.square_size * 2.5))
-		
-		self.RenderProperties = RP
-		self.hp = self.max_hp
-		self.score = 0
-		self.land = land
-		self.font = 'arial'
-		self.fire_gun_texture = None
+
 		if enemy_list is None:
 			raise ValueError("Player initialised without enemy list")
 		if color is None:
@@ -198,21 +169,36 @@ class Player:
 			facing = 'up'
 		if land is None:
 			raise ValueError("Player initialised without world map")
-		self.enemy_list = enemy_list
+
+		class RP:
+			hp_bar_relative = pg.Rect((0, 0), (7 * Sets.square_size, 1.5 * Sets.square_size))
+			draw_path = False
+			hp_bar_offset = Vec2((-hp_bar_relative.width * 0.5, -Sets.square_size * 2.5))
+		self.RenderProperties = RP
+
+		self.max_hp = int(hp_max)
+		self.manager: pygame_gui.UIManager = None
+		self.hp_bar: pygame_gui.elements.UIProgressBar = None
+		self.hp: int = self.max_hp
+		self.score: int = 0
 		self.land = land
-		self.color = color
-		self.pos = Vec2((x, y))
-		self.speed_def = speed_def
-		self.speed = speed_def
-		self.facing = facing
-		self.sq2 = sqrt(2) / 2
-		self.fire_gun_rangle = .0
-		self.show_firegun = True
+		self.font: pg.Font = 'arial'
+		self.fire_gun_texture: pg.Surface = None
+		self.enemy_list: list[Enemy] = enemy_list
+		self.color: pg.Color = color
+		self.pos: Vec2 = Vec2((x, y))
+		self.speed_def: int | float = speed_def
+		self.speed: int | float = speed_def
+		self.facing: str = facing
+		self.sq2: float = sqrt(2) / 2
+		self.fire_gun_rangle: float = .0
+		self.show_firegun: bool = True
+		self.inventory_open: bool = False
 		self.inventory: Inventory = Inventory(
-			inventory_size=(5, 5),
+			inventory_size=(15, 15),
 			cell_size=30,
 			font=None,
-			
+			distance_between_cells=-5,
 		)
 	
 	@property
@@ -263,7 +249,7 @@ class Player:
 	
 	def go_to_nearest_block(self):
 		if None in self.pos.xy:
-			raise MemoryError("position is not initialised")
+			raise ValueError("position is not initialised")
 		res = ((0, 0), 10000)
 		for block in self.land.land_map.keys():
 			distance = dist(self.bpos, block)
@@ -298,9 +284,6 @@ class Player:
 	
 	def render(self, sc: pg.Surface, offset):
 		self.hp_bar.set_position(Vec2(self.RenderProperties.hp_bar_offset + self.pos.xy) - offset)
-		self.inventory.menu.render(sc, offset=(100, 100))
-		if self.manager:
-			self.manager.draw_ui(sc)
 		pg.draw.circle(
 			surface=sc,
 			color=self.color,
@@ -329,14 +312,18 @@ class Player:
 				rect,
 			)
 	
-	def post_render(self, sc: pg.Surface):
+	def render_gui(self, sc: pg.Surface):
+		if self.manager:
+			if self.inventory_open:
+				self.inventory.menu.render(sc, offset=(100, 100))
+				self.manager.draw_ui(sc)
 		if isinstance(self.font, str):
 			self.font = pg.font.Font(f'fonts/{self.font}.ttf', size=clamp(Sets.square_size, 40, 50))
 			self.inventory.font = self.font
-		src = self.font.render(f"Score: {self.score}", True, (155, 255, 255))
-		sc.blit(src, [0, 0])
+		src_player_score = self.font.render(f"Score: {self.score}", True, (155, 255, 255))
+		sc.blit(src_player_score, [0, 0])
 	
-	def logic(self, colliding: list[Drop], offset: tuple, sc: pg.Surface):
+	def logic(self, colliding: list[Drop], offset: tuple, scope: float):
 		if None in self.pos.xy:
 			self.pos = Vec2(Sets.Sc.center)
 		
@@ -346,7 +333,11 @@ class Player:
 		
 		if pg.mouse.get_pressed()[0]:
 			self.show_firegun = True
-			mpos = Vec2(pg.mouse.get_pos()) + offset
+			mpos = pg.mouse.get_pos()
+			mpos = (
+				(mpos[0] - Sets.Sc.h_width) / scope + Sets.Sc.h_width + offset[0],
+				(mpos[1] - Sets.Sc.h_height) / scope + Sets.Sc.h_height + offset[1],
+			)
 			self.fire_gun_rangle = atan2(*(self.pos - mpos)) + pi
 			to = (Sets.square_size * 8 * sin(self.fire_gun_rangle) + self.x,
 			      Sets.square_size * 8 * cos(self.fire_gun_rangle) + self.y)
@@ -398,8 +389,7 @@ class Player:
 		
 		for coll in colliding:
 			if rect.colliderect(coll):
-				# return
-				pass
+				return
 		self.pos += self.speed_dim
 
 

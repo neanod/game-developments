@@ -79,7 +79,7 @@ class Enemy:
 		self.manager = pygame_gui.UIManager(Sets.Sc.res)
 		self.hp_bar = pygame_gui.elements.UIProgressBar(
 			relative_rect=self.RenderProperties.hp_bar_relative,
-			manager=self.manager
+			manager=self.manager,
 		)
 		self.hp_bar.border_colour = self.hp_bar.text_colour = Color(0, 0, 0)
 		self.hp_bar.text_shadow_colour = Color(100, 100, 100)
@@ -193,24 +193,24 @@ class Enemy:
 			d = dist(self.xy, target.xy)
 			if d < Sets.II.a_star_max:
 				self.speed = self.speed_def
-				# if self.speed_def + 1 < d < Sets.II.a_star_min:
-				# 	self.rangle = -atan2(*(self.pos - target.xy))
-				# 	self.path = list()
-				# else:
+				if self.speed_def + 1 < d < Sets.II.a_star_min:
+					self.rangle = -atan2(*(self.pos - target.xy))
+					self.path = list()
+				else:
 
-				if self.path.__len__() == 0 or dist(self.path[-1], target // Sets.square_size) > 5:
-					self.reconstruct_path(target)
-				
-				# angle calc
-				if self.path is None or len(self.path) < 2:
-					self.speed = 0
-					return
-				
-				to = (self.path[1][0] + 0.5) * Sets.square_size, (self.path[1][1] + 0.5) * Sets.square_size
-				if dist(self.xy, Vec2(self.path[0]) * Sets.square_size) < self.speed_def * 6:
-					self.path.pop(0)
-				
-				self.rangle = -atan2(*(self.pos - to))
+					if self.path.__len__() == 0 or dist(self.path[-1], target // Sets.square_size) > 5:
+						self.reconstruct_path(target)
+					
+					# angle calc
+					if self.path is None or len(self.path) < 2:
+						self.speed = 0
+						return
+					
+					to = (self.path[1][0] + 0.5) * Sets.square_size, (self.path[1][1] + 0.5) * Sets.square_size
+					if dist(self.xy, Vec2(self.path[0]) * Sets.square_size) < self.speed_def * 6:
+						self.path.pop(0)
+					
+					self.rangle = -atan2(*(self.pos - to))
 			else:
 				self.speed = 0
 				self.path: list[tuple] = list()

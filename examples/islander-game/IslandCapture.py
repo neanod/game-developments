@@ -3,8 +3,8 @@ from render import *
 from matan import get_camera_offset, clamp, Vec2
 from world import camera_logic, Camera, world_post_gen, get_pressed, EnemyList, WorldMap, pre_world_gen
 from player import Player
+import asyncio
 import pygame_gui
-
 
 PLAYER = Player(land=WorldMap, enemy_list=EnemyList.enemies, hp_max=1000)
 
@@ -46,57 +46,63 @@ def pressed_logic():
 		# (True, True, False, False) | (True, False, False, True) | (False, False, True, True) | (False, True, True, False)
 
 
-def main():
-	pg.init()
+async def main():
 	sc: Surface = pg.display.set_mode(Sets.Sc.res)
 	post_gen = lambda rate: [world_post_gen(*WorldMap.to_gen[i]) for i in range(rate)]
-	pg.display.set_caption("Island Capture.")
 	clock = pg.time.Clock()
 	gen_per_tick = 500
-	running = True
-	pre_world_gen(sc)
-	PLAYER.manager = pygame_gui.UIManager(Sets.Sc.res)
-	PLAYER.hp_bar = pygame_gui.elements.UIProgressBar(
+	
+	async def setup():
+		PLAYER.pos = Vec2(Sets.Sc.center)
+		Camera.pos = PLAYER.pos.xy
+		pg.init()
+		pg.display.set_caption("Island Capture.")
+		await pre_world_gen(sc)
+		PLAYER.go_to_nearest_block()
+		
+		PLAYER.manager = pygame_gui.UIManager(Sets.Sc.res)
+		PLAYER.hp_bar = pygame_gui.elements.UIProgressBar(
 			relative_rect=PLAYER.RenderProperties.hp_bar_relative,
 			manager=PLAYER.manager
 		)
-	PLAYER.hp_bar.border_colour = PLAYER.hp_bar.text_colour = pg.Color(0, 0, 0)
-	PLAYER.hp_bar.text_shadow_colour = pg.Color(100, 100, 100)
-	PLAYER.hp_bar.bar_filled_colour = pg.Color(0, 200, 0)
-	PLAYER.hp_bar.bar_unfilled_colour = pg.Color(200, 0, 0)
+		PLAYER.hp_bar.border_colour = PLAYER.hp_bar.text_colour = pg.Color(0, 0, 0)
+		PLAYER.hp_bar.text_shadow_colour = pg.Color(100, 100, 100)
+		PLAYER.hp_bar.bar_filled_colour = pg.Color(0, 200, 0)
+		PLAYER.hp_bar.bar_unfilled_colour = pg.Color(200, 0, 0)
 	
-	def logic(t):
+	async def logic():
 		get_pressed()
 		pressed_logic()
-		Camera.pos = camera_logic(Camera.pos, PLAYER.pos.xy, t, sc)
+		Camera.pos = camera_logic(Camera.pos, PLAYER.pos.xy, Sets.t, sc)
 		gen_need = min(gen_per_tick, len(WorldMap.to_gen))
 		post_gen(gen_need)
 		WorldMap.to_gen = WorldMap.to_gen[gen_need:]
-		PLAYER.logic(WorldMap.land_colliding, get_camera_offset(Camera.pos), sc)
+		PLAYER.logic(WorldMap.land_colliding, get_camera_offset(Camera.pos), Camera.scope)
 		[x.logic(PLAYER.pos) for x in EnemyList.enemies]
-		if not t % Sets.FPS:
+		Camera.offset = get_camera_offset(Camera.pos)
+		if not Sets.t % Sets.FPS:
 			pg.display.set_caption(f"Island Capture. FPS: {round(clock.get_fps(), 1)}; FT: {clock.get_time()}")
+		Sets.t += 1
 	
-	def game():
-		t = 0
-		PLAYER.pos = Vec2(Sets.Sc.center)
-		PLAYER.go_to_nearest_block()
-		while running:
-			"""LOGIC"""
-			logic(t)
-			camera_offset = get_camera_offset(Camera.pos)
-			"""RENDER"""
-			render_world(sc, camera_offset)
-			PLAYER.render(sc, camera_offset)
-			[x.render(sc, camera_offset) for x in EnemyList.enemies]
-			scope_camera(sc, Camera.scope)
-			PLAYER.post_render(sc)
-			pg.display.update()
-			clock.tick(Sets.FPS)
-			t += 1
+	async def render():
+		render_world(sc, Camera.offset)
+		PLAYER.render(sc, Camera.offset)
+		[x.render(sc, Camera.offset) for x in EnemyList.enemies]
+		scope_camera(sc, Camera.scope)
+		PLAYER.render_gui(sc)
+		pg.display.update()
+		clock.tick(Sets.FPS)
 	
-	game()
+	# Camera.pos = PLAYER.pos
+	
+	async def game():
+		await setup()
+		while Sets.running:
+			await logic()
+			await render()
+	
+	await game()
 
 
 if __name__ == '__main__':
-	main()
+	asyncio.run(main())

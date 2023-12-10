@@ -45,6 +45,7 @@ def get_color(n) -> pg.Color:
 
 
 def exit_game():
+	Sets.running = False
 	pg.quit()
 	quit(0)
 
