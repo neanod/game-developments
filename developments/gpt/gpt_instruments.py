@@ -1,16 +1,19 @@
-import time
 import openai
 import get_token
 
 openai.api_key = get_token.gpt_token()
 
 
-class GPT:
+class GPT3:
 	def __init__(self, assist=None, model=None):
+		"""
+		:type assist: str
+		:type model: str
+		"""
 		if assist is None:
-			self.assist_text = "You are helpful bot"
+			self.system_prompt = "You are helpful bot"
 		else:
-			self.assist_text = assist
+			self.system_prompt = assist
 		if model is None:
 			self.model = 'gpt-3.5-turbo'
 		else:
@@ -18,71 +21,45 @@ class GPT:
 		self.message_history = [
 			{
 				"role": "system",
-				"content": self.assist_text
+				"content": self.system_prompt
 			}
 		]
 		
-	def clear_history(self) -> None:
+	def clear_history(self):
 		self.message_history = [
 			{
 				"role": "system",
-				"content": self.assist_text
+				"content": self.system_prompt
 			}
 		]
 	
-	def get_response(self, _text, retry=True, limit=None, timeout=60) -> str:
-		# enter the message
+	def get_response(self, user_prompt: str) -> str:
 		self.message_history.append(
 			{
 				"role": "user",
-				"content": _text,
+				"content": user_prompt,
 			}
 		)
-		# get response
-		if retry:
-			while True:
-				try:
-					completion = openai.chat.completions.create(
-						model=self.model,
-						messages=self.message_history,
-						max_tokens=limit,
-						timeout=timeout,
-						frequency_penalty=0.1,
-					)
-					break
-				except openai.RateLimitError as e:
-					time.sleep(20)
-					print("\tRate Limit exhausted. Retrying")
-					if "Request too large" in str(e):
-						completion = {
-							"role": "assistant",
-							"content": "NO_INFORMATION - too long request",
-						}
-						break
-						
-				except openai.BadRequestError:
-					completion = {
-						"role": "assistant",
-						"content": "NO_INFORMATION - too long request",
-					}
-					break
-		else:
-			try:
-				completion = openai.chat.completions.create(
-					model=self.model,
-					messages=self.message_history,
-				)
-			except openai.RateLimitError:
-				self.message_history.pop(-1)
-				return None
-		try:
-			response: str = completion.choices[0].message.content
-		except AttributeError:
-			response = completion['content']
+		
+		completion = openai.chat.completions.create(
+			model=self.model,
+			messages=self.message_history,
+		)
+		
 		self.message_history.append(
 			{
 				"role": "assistant",
-				"content": response,
+				"content": completion.choices[0].message.content,
 			}
 		)
-		return response
+		return completion.choices[0].message.content
+
+
+if __name__ == '__main__':
+	bot = GPT3()
+	try:
+		print(bot.get_response("Hello!"))
+	except openai.PermissionDeniedError as e:
+		with open("error.html", 'w') as f:
+			f.write(e.message)
+			

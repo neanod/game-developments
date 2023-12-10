@@ -13,3 +13,6 @@ selenium
 requests
 gpt4all
 colorama
+free-proxy
+
+folium

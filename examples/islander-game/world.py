@@ -1,19 +1,22 @@
 import random
+from math import dist
 from matan import get_color, exit_game, Vec2
 import pygame as pg
 from sets import Sets, ButtonsInfo
 import heapq
 from numpy import sin, cos
-from enemy import Enemy
+from enemy import Enemy, Drop
 
 
 class Camera:
 	scope: float = 1
 	pos = list(Sets.Sc.center.copy())
+	offset = (0, 0)
 
 
 def clamp(_x: int | float, _min: int | float, _max: int | float) -> int | float:
 	"""
+	clamps the number
 	:param _x: number to clamp
 	:param _min: minimum
 	:param _max: maximum
@@ -22,23 +25,22 @@ def clamp(_x: int | float, _min: int | float, _max: int | float) -> int | float:
 	return min(_max, max(_min, _x))
 
 
-def heuristic_cost_estimate(pos, goal) -> float:
-	x1, y1 = pos
-	x2, y2 = goal
-	n = 1.6  # если делать по dist(pos, pos2) то получится хуже
-	return (abs(x1 - x2) ** n + abs(y1 - y2) ** n) ** (1 / n)
+def heuristic_cost_estimate(pos, goal, *, random_k=10) -> float:
+	return dist(pos, goal) + random.randint(0, random_k) / 10
 
 
-def camera_logic(camera_pos, player_pos, t) -> list[int, int]:
+def camera_logic(camera_pos, player_pos, t, sc) -> list[int, int]:
 	"""
 	Returns clamped camera pos.
 	Do world-gen logic
+	:param sc: screen
 	:type t: int
 	:type camera_pos: list[int, int]
 	:type player_pos: tuple[int, int]
 	:return None
 	"""
-	
+	if None in player_pos:
+		return Sets.Sc.center
 	camera_pos = [
 		clamp(
 			camera_pos[0],
@@ -66,7 +68,7 @@ def camera_logic(camera_pos, player_pos, t) -> list[int, int]:
 			if (x_temp, z_temp) not in world_keys:
 				# if (x_temp, z_temp) not in WorldMap.to_gen:
 				# 	WorldMap.to_gen.append((x_temp, z_temp))
-				world_post_gen(x_temp, z_temp)
+				world_post_gen(x_temp, z_temp, sc)
 	return camera_pos
 
 
@@ -110,8 +112,6 @@ def find_path_a_star(start_pos, end_pos, world_map):
 						f_score = tentative_g + heuristic_cost_estimate(neighbor, end_pos)
 						heapq.heappush(open_set, (f_score, neighbor))
 						came_from[neighbor] = current_pos
-	
-	return None
 
 
 def reconstruct_path(came_from, current_pos):
@@ -126,8 +126,22 @@ def clamp_color_channel(_x) -> int:
 	return max(0, min(255, _x))
 
 
-def world_post_gen(x_pos, z_pos) -> None:
+async def pre_world_gen(sc) -> None:
 	"""
+	World gen in big rectangle previous starting game
+	:return: nothing
+	"""
+	bound = 50
+	for x in range(-bound, Sets.Sc.width // Sets.square_size + bound):
+		for z in range(-bound, Sets.Sc.height // Sets.square_size + bound):
+			world_post_gen(x, z, sc, spawn_enemy=False)
+
+
+def world_post_gen(x_pos, z_pos, sc, *, spawn_enemy=True) -> None:
+	"""
+	:param sc: screen
+	:type sc: pg.Surface
+	:type spawn_enemy: bool
 	:type z_pos: int
 	:type x_pos: int
 	"""
@@ -145,14 +159,17 @@ def world_post_gen(x_pos, z_pos) -> None:
 	# update image of chunk, where block is placed
 	cposx: int = x_pos // WorldMap.chunk_size
 	cposz: int = z_pos // WorldMap.chunk_size
-	if not random.randint(0, int(1 / Sets.enemy_spawn_chance) - 1) and h > Sets.water_level:
+	if spawn_enemy and not random.randint(0, int(1 / Sets.enemy_spawn_chance) - 1) and h > Sets.water_level:
 		EnemyList.enemies.append(
 			Enemy(
+				sc=sc,
 				x=x_pos * Sets.square_size,
 				y=z_pos * Sets.square_size,
 				world_map=WorldMap.land_map,
 				path_find_f=find_path_a_star,
 				speed_def=5,
+				all_enemies=EnemyList.enemies,
+				list_to_drop=WorldMap.drop_list,
 			)
 		)
 	for c in WorldMap.chunks:
@@ -364,8 +381,9 @@ def get_block_at(x: int, z: int) -> float:
 	x -= Sets.Sc.h_width // Sets.square_size
 	z -= Sets.Sc.h_height // Sets.square_size
 	
+	# return Sets.noise([x / Sets.period, z / Sets.period]) + 0.5 * Sets.amp
 	# return hypot(x, 1000 / (z + 0.0001)) * 0.02
-	return Sets.water_level + 0.1 if sin((x + 8) / 15) * cos(z / 10) > -0.2 else Sets.water_level - 0.1
+	return sin((x + 8) / 15) * cos(z / 10) * 0.2 + 0.04 + Sets.water_level
 
 
 class WorldMap:
@@ -374,8 +392,9 @@ class WorldMap:
 	size = int(Sets.Sc.width / Sets.square_size), int(Sets.Sc.height / Sets.square_size)
 	to_gen: list = list()
 	land_map: dict = dict()
+	drop_list: list[Drop] = list()
 	land_colliding: list[Vec2] = list()
-
+	
 
 class EnemyList:
 	enemies: list[Enemy] = list()

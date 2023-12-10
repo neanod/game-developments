@@ -18,11 +18,13 @@ class ButtonsInfo:
 
 
 class Sets:
+	running = True
+	t = 0
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
 	square_size: int = 15
 	matching: bool = True
-	enemy_spawn_chance = 0.0003
+	enemy_spawn_chance = 0.0008
 	
 	spawn_zone: float = 0
 	
@@ -62,11 +64,11 @@ class Sets:
 		)
 		
 	class II:
-		a_star_min = 70
-		a_star_max = 800
-		
+		a_star_min = 110
+		a_star_max = ...
 		# max distance between end point of way and target
-		delta_offset_f = lambda __p, __q: dist(__p.xy, __q.xy) > 80
+		delta_offset_f = lambda __p, __q: dist(__p.xy, __q.xy) > 100
+	II.a_star_max = Sc.width // 2
 	
 
 class SelectedInfo:
