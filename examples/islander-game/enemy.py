@@ -1,5 +1,5 @@
 from math import sqrt, sin, cos, atan2, degrees, dist
-from matan import Vec2
+from sussy_things import Vec2
 from sets import Sets
 from pygame import draw, Surface, Color, Rect, image, transform
 import pygame_gui

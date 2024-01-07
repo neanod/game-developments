@@ -1,7 +1,7 @@
-from math import sqrt, dist, sin, cos, degrees, atan2, pi
+from math import sqrt, dist, sin, cos, degrees, atan2, pi, floor
 import pygame_gui
 from types import FunctionType
-from matan import Vec2, clamp, collisionCircleLine
+from sussy_things import Vec2, clamp, collisionCircleLine
 from sets import Sets
 import pygame as pg
 from enemy import Drop, Enemy
@@ -164,7 +164,7 @@ class Player:
 		if color is None:
 			color = 255, 255, 255
 		if speed_def is None:
-			speed_def = 9
+			speed_def = 8
 		if facing is None:
 			facing = 'up'
 		if land is None:
@@ -176,13 +176,13 @@ class Player:
 			hp_bar_offset = Vec2((-hp_bar_relative.width * 0.5, -Sets.square_size * 2.5))
 		self.RenderProperties = RP
 
-		self.max_hp = int(hp_max)
+		self.max_hp: int = floor(hp_max)
 		self.manager: pygame_gui.UIManager = None
 		self.hp_bar: pygame_gui.elements.UIProgressBar = None
 		self.hp: int = self.max_hp
 		self.score: int = 0
 		self.land = land
-		self.font: pg.Font = 'arial'
+		self.font: pg.Font | str = 'arial'
 		self.fire_gun_texture: pg.Surface = None
 		self.enemy_list: list[Enemy] = enemy_list
 		self.color: pg.Color = color

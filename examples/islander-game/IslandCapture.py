@@ -1,7 +1,7 @@
 from pygame import Surface
 from render import *
-from matan import get_camera_offset, clamp, Vec2
-from world import camera_logic, Camera, world_post_gen, get_pressed, EnemyList, WorldMap, pre_world_gen
+from sussy_things import get_camera_offset, clamp, Vec2
+from world import camera_logic, Camera, world_post_gen, get_pressed, EnemyList, WorldMap, pre_world_gen, build_bridge
 from player import Player
 import asyncio
 import pygame_gui
@@ -44,6 +44,9 @@ def pressed_logic():
 				case (False, True, True, False):
 					PLAYER.facing = 'down-left'
 		# (True, True, False, False) | (True, False, False, True) | (False, False, True, True) | (False, True, True, False)
+	if ButtonsInfo.R:
+		ButtonsInfo.R = Sets.flush_bridge_building
+		PLAYER.score -= build_bridge(PLAYER.bpos, get_clicked_rectangle(pg.mouse.get_pos(), get_camera_offset(Camera.pos)), PLAYER.score)
 
 
 async def main():
@@ -57,7 +60,7 @@ async def main():
 		Camera.pos = PLAYER.pos.xy
 		pg.init()
 		pg.display.set_caption("Island Capture.")
-		await pre_world_gen(sc)
+		pre_world_gen(sc)
 		PLAYER.go_to_nearest_block()
 		
 		PLAYER.manager = pygame_gui.UIManager(Sets.Sc.res)

@@ -13,11 +13,14 @@ class ButtonsInfo:
 	S = False
 	D = False
 	
+	R = False
+	
 	m_pos: tuple[int, int] = 0, 0
 	mwheel: int = 0
 
 
 class Sets:
+	bridge_width: int = 3
 	running = True
 	t = 0
 	FPS: int = 60
@@ -26,6 +29,7 @@ class Sets:
 	matching: bool = True
 	enemy_spawn_chance = 0.0008
 	
+	flush_bridge_building = False
 	spawn_zone: float = 0
 	
 	gen_dist: int = 10
@@ -46,8 +50,8 @@ class Sets:
 	water_level: float = 1.2
 	
 	class Sc:
-		res: list[int, int] = [1920 - 200, 1080 - 200]
-		# res: list[int, int] = [1920, 1080]
+		# res: list[int, int] = [1920 - 200, 1080 - 200]
+		res: list[int, int] = [1920, 1080]
 		width: int = res[0]
 		height: int = res[1]
 		h_width: int = width // 2
@@ -64,8 +68,8 @@ class Sets:
 		)
 		
 	class II:
-		a_star_min = 110
-		a_star_max = ...
+		a_star_min: int = 110
+		a_star_max: int = ...
 		# max distance between end point of way and target
 		delta_offset_f = lambda __p, __q: dist(__p.xy, __q.xy) > 100
 	II.a_star_max = Sc.width // 2

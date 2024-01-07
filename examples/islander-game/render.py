@@ -1,6 +1,6 @@
 from sets import SelectedInfo, ButtonsInfo, Sets
 from world import WorldMap, find_path_a_star
-from matan import get_clicked_rectangle
+from sussy_things import get_clicked_rectangle
 import pygame as pg
 
 

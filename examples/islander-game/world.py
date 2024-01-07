@@ -1,6 +1,7 @@
 import random
-from math import dist
-from matan import get_color, exit_game, Vec2
+from math import dist, hypot
+from typing import Callable
+from sussy_things import get_color, exit_game, Vec2, bresenham_with_width
 import pygame as pg
 from sets import Sets, ButtonsInfo
 import heapq
@@ -17,7 +18,7 @@ class Camera:
 def clamp(_x: int | float, _min: int | float, _max: int | float) -> int | float:
 	"""
 	clamps the number
-	:param _x: number to clamp
+	:param _x: num to clamp
 	:param _min: minimum
 	:param _max: maximum
 	:return: clamped number
@@ -25,7 +26,7 @@ def clamp(_x: int | float, _min: int | float, _max: int | float) -> int | float:
 	return min(_max, max(_min, _x))
 
 
-def heuristic_cost_estimate(pos, goal, *, random_k=10) -> float:
+def heuristic_cost_estimate(pos, goal, *, random_k=0) -> float:
 	return dist(pos, goal) + random.randint(0, random_k) / 10
 
 
@@ -41,18 +42,20 @@ def camera_logic(camera_pos, player_pos, t, sc) -> list[int, int]:
 	"""
 	if None in player_pos:
 		return Sets.Sc.center
-	camera_pos = [
-		clamp(
-			camera_pos[0],
-			player_pos[0] - Sets.Sc.cam_to_player_box_size[0] // 2,
-			player_pos[0] + Sets.Sc.cam_to_player_box_size[0] // 2,
-		),
-		clamp(
-			camera_pos[1],
-			player_pos[1] - Sets.Sc.cam_to_player_box_size[1] // 2,
-			player_pos[1] + Sets.Sc.cam_to_player_box_size[1] // 2,
-		)
-	]
+	# camera_pos = [
+	# 	clamp(
+	# 		camera_pos[0],
+	# 		player_pos[0] - Sets.Sc.cam_to_player_box_size[0] // 2,
+	# 		player_pos[0] + Sets.Sc.cam_to_player_box_size[0] // 2,
+	# 	),
+	# 	clamp(
+	# 		camera_pos[1],
+	# 		player_pos[1] - Sets.Sc.cam_to_player_box_size[1] // 2,
+	# 		player_pos[1] + Sets.Sc.cam_to_player_box_size[1] // 2,
+	# 	)
+	# ]
+	delta = Vec2(player_pos) - camera_pos
+	camera_pos = Vec2(camera_pos) + Vec2(delta) / 10
 	if t % 6:
 		return camera_pos
 	# world_generation
@@ -95,17 +98,12 @@ def find_path_a_star(start_pos, end_pos, world_map):
 		for delta_pos in [
 			(1, 0), (0, 1), (-1, 0), (0, -1),
 			(1, 1), (1, -1), (-1, 1), (-1, -1),
-			
-			# (-1, 2), (0, 2), (1, 2), (2, 2),
-			# (-2, -2), (0, -2), (1, -2), (1, -2),
-			# (2, 1), (2, 0), (2, -1), (2, -2),
-			# (-2, 2), (-2, 1), (-2, 0), (-2, -1),
 		]:
 			neighbor = (current_pos[0] + delta_pos[0], current_pos[1] + delta_pos[1])
 			
 			if neighbor in world_map.keys():
 				if world_map[neighbor] > Sets.water_level:
-					tentative_g = g_score[current_pos] + 1
+					tentative_g = g_score[current_pos] + abs(Vec2(delta_pos))
 					
 					if neighbor not in g_score or tentative_g < g_score[neighbor]:
 						g_score[neighbor] = tentative_g
@@ -122,43 +120,90 @@ def reconstruct_path(came_from, current_pos):
 	return path
 
 
+def build_bridge(pos1: tuple, pos2: tuple, score_available: int):
+	way: set[tuple[int, int]] = bresenham_with_width(Sets.bridge_width, *pos1, *pos2)
+	wasted = 0
+	# print(pg.Rect(1740, 2205, 15, 15) in WorldMap.land_colliding)
+	for block in way:
+		rect = pg.Rect(
+			block[0] * Sets.square_size,
+			block[1] * Sets.square_size,
+			Sets.square_size,
+			Sets.square_size
+		)
+		if rect in WorldMap.land_colliding:
+			WorldMap.land_map[block] = 10
+			WorldMap.land_colliding.remove(rect)
+			for i in range(len(WorldMap.chunks)):
+				ch = WorldMap.chunks[i]
+				if ch.cpos == (block[0] // WorldMap.chunk_size, block[1] // WorldMap.chunk_size):
+					if i:
+						WorldMap.chunks[0], WorldMap.chunks[i] = WorldMap.chunks[i], WorldMap.chunks[0]
+					ch.add_block(*block, height=10, round_borders=False)
+					score_available -= 1
+					wasted += 1
+					if not score_available:
+						break
+	return wasted
+
+
 def clamp_color_channel(_x) -> int:
 	return max(0, min(255, _x))
 
 
-async def pre_world_gen(sc) -> None:
+def pre_world_gen(sc) -> None:
 	"""
 	World gen in big rectangle previous starting game
 	:return: nothing
 	"""
-	bound = 50
+	bound = 90
+	without_enemy_bound = -10
 	for x in range(-bound, Sets.Sc.width // Sets.square_size + bound):
 		for z in range(-bound, Sets.Sc.height // Sets.square_size + bound):
-			world_post_gen(x, z, sc, spawn_enemy=False)
+			world_post_gen(x, z, sc, spawn_enemy=all((
+				x not in range(-without_enemy_bound, Sets.Sc.width // Sets.square_size + without_enemy_bound),
+				z not in range(-without_enemy_bound, Sets.Sc.height // Sets.square_size + without_enemy_bound)
+			)))
 
 
-def world_post_gen(x_pos, z_pos, sc, *, spawn_enemy=True) -> None:
+def world_post_gen(x_pos, z_pos, sc, *, spawn_enemy=True, spawn_block=True) -> None:
 	"""
 	:param sc: screen
+	:type spawn_block: bool
 	:type sc: pg.Surface
 	:type spawn_enemy: bool
 	:type z_pos: int
 	:type x_pos: int
 	"""
-	h = get_block_at(x_pos, z_pos)
-	WorldMap.land_map[(x_pos, z_pos)] = h
-	if h < Sets.water_level:
-		WorldMap.land_colliding.append(
-			pg.Rect(
-				x_pos * Sets.square_size,
-				z_pos * Sets.square_size,
-				Sets.square_size,
-				Sets.square_size
+	h: float = get_block_at(x_pos, z_pos)
+	if spawn_block:
+		WorldMap.land_map[(x_pos, z_pos)] = h
+		if h < Sets.water_level:
+			WorldMap.land_colliding.append(
+				pg.Rect(
+					x_pos * Sets.square_size,
+					z_pos * Sets.square_size,
+					Sets.square_size,
+					Sets.square_size
+				)
 			)
-		)
-	# update image of chunk, where block is placed
-	cposx: int = x_pos // WorldMap.chunk_size
-	cposz: int = z_pos // WorldMap.chunk_size
+		# update image of chunk, where block is placed
+		cposx: int = x_pos // WorldMap.chunk_size
+		cposz: int = z_pos // WorldMap.chunk_size
+		for c in WorldMap.chunks:
+			if c.cx == cposx and c.cz == cposz:
+				c.add_block(x_pos, z_pos, h)
+				break
+		else:
+			WorldMap.chunks.append(
+				WorldChunk(
+					cposx,
+					cposz,
+					get_color,
+				)
+			)
+			
+			WorldMap.chunks[-1].add_block(x_pos, z_pos, h)
 	if spawn_enemy and not random.randint(0, int(1 / Sets.enemy_spawn_chance) - 1) and h > Sets.water_level:
 		EnemyList.enemies.append(
 			Enemy(
@@ -172,26 +217,11 @@ def world_post_gen(x_pos, z_pos, sc, *, spawn_enemy=True) -> None:
 				list_to_drop=WorldMap.drop_list,
 			)
 		)
-	for c in WorldMap.chunks:
-		if c.cx == cposx and c.cz == cposz:
-			c.add_block(x_pos, z_pos, h)
-			break
-	else:
-		WorldMap.chunks.append(
-			WorldChunk(
-				cposx,
-				cposz,
-				get_color,
-			)
-		)
-		
-		WorldMap.chunks[-1].add_block(x_pos, z_pos, h)
 
 
 class WorldChunk:
-	def __init__(self, cx, cz, color_function):
+	def __init__(self, cx: int, cz: int, color_function: Callable):
 		"""
-		
 		:param cx: X position in chunk system
 		:type cx: int
 		:param cz: Y position in chunk system
@@ -217,8 +247,9 @@ class WorldChunk:
 		)
 		self.get_color = color_function
 	
-	def add_block(self, _x: int, _y: int, height: float, force=None) -> None:
+	def add_block(self, _x: int, _y: int, height: float, force=None, round_borders=True) -> None:
 		"""
+		:type round_borders: bool
 		:param _x: x_pos in blocky system
 		:param _y: y_pos in blocky system
 		:param height: height of block in the world
@@ -241,63 +272,74 @@ class WorldChunk:
 			)
 			return
 		
-		self.sc.fill(
-			color=(0, 0, 255),
-			rect=[
-				_x * Sets.square_size - self.ax,
-				_y * Sets.square_size - self.az,
-				Sets.square_size,
-				Sets.square_size,
-			]
-		)
-		# ground
-		# соседство тьюринга. потому что не фон неймана
-		neighbour: list[bool, bool, bool, bool] = list()
-		for delta in [
-			(0, -1),
-			(1, 0),
-			(0, 1),
-			(-1, 0),
-		]:
-			if (delta[0] + _x, delta[1] + _y) in WorldMap.land_map.keys():
-				neighbour.append(WorldMap.land_map[delta[0] + _x, delta[1] + _y] > Sets.water_level)
-			else:
-				neighbour.append(get_block_at(delta[0] + _x, delta[1] + _y) > Sets.water_level)
-		
-		match neighbour:
-			case [0, 0, 0, 0]:
-				args = rad,
-			case [1, 0, 0, 0]:
-				args = 0, 0, 0, rad, rad
-			case [0, 1, 0, 0]:
-				args = 0, rad, 0, rad, 0
-			case [0, 0, 1, 0]:
-				args = 0, rad, rad, 0, 0
-			case [0, 0, 0, 1]:
-				args = 0, 0, rad, 0, rad
-			case [1, 1, 0, 0]:
-				args = 0, 0, 0, rad, 0
-			case [0, 1, 1, 0]:
-				args = 0, rad, 0, 0, 0
-			case [0, 0, 1, 1]:
-				args = 0, 0, rad, 0, 0
-			case [1, 0, 0, 1]:
-				args = 0, 0, 0, 0, rad
-			case _:  # [1, 1, 1, 1] | [0, 1, 1, 1] | [1, 0, 1, 1] | [1, 1, 0, 1] | [1, 1, 1, 0] | [1, 0, 1, 0] | [0, 1, 0, 1]:
-				args = ()
-		
-		pg.draw.rect(
-			self.sc,
-			color,
-			[
-				_x * Sets.square_size - self.ax,
-				_y * Sets.square_size - self.az,
-				Sets.square_size,
-				Sets.square_size,
-			],
-			0,
-			*args,
-		)
+		if round_borders:
+			self.sc.fill(
+				color=(0, 0, 255),
+				rect=[
+					_x * Sets.square_size - self.ax,
+					_y * Sets.square_size - self.az,
+					Sets.square_size,
+					Sets.square_size,
+				]
+			)
+			# ground
+			# соседство тьюринга. потому что не фон неймана
+			neighbour: list[bool, bool, bool, bool] = list()
+			for delta in [
+				(0, -1),
+				(1, 0),
+				(0, 1),
+				(-1, 0),
+			]:
+				if (delta[0] + _x, delta[1] + _y) in WorldMap.land_map.keys():
+					neighbour.append(WorldMap.land_map[delta[0] + _x, delta[1] + _y] > Sets.water_level)
+				else:
+					neighbour.append(get_block_at(delta[0] + _x, delta[1] + _y) > Sets.water_level)
+			
+			match neighbour:
+				case [0, 0, 0, 0]:
+					args = rad,
+				case [1, 0, 0, 0]:
+					args = 0, 0, 0, rad, rad
+				case [0, 1, 0, 0]:
+					args = 0, rad, 0, rad, 0
+				case [0, 0, 1, 0]:
+					args = 0, rad, rad, 0, 0
+				case [0, 0, 0, 1]:
+					args = 0, 0, rad, 0, rad
+				case [1, 1, 0, 0]:
+					args = 0, 0, 0, rad, 0
+				case [0, 1, 1, 0]:
+					args = 0, rad, 0, 0, 0
+				case [0, 0, 1, 1]:
+					args = 0, 0, rad, 0, 0
+				case [1, 0, 0, 1]:
+					args = 0, 0, 0, 0, rad
+				case _:  # [1, 1, 1, 1] | [0, 1, 1, 1] | [1, 0, 1, 1] | [1, 1, 0, 1] | [1, 1, 1, 0] | [1, 0, 1, 0] | [0, 1, 0, 1]:
+					args = ()
+			
+			pg.draw.rect(
+				self.sc,
+				color,
+				[
+					_x * Sets.square_size - self.ax,
+					_y * Sets.square_size - self.az,
+					Sets.square_size,
+					Sets.square_size,
+				],
+				0,
+				*args,
+			)
+		else:
+			self.sc.fill(
+				color=color,
+				rect=[
+					_x * Sets.square_size - self.ax,
+					_y * Sets.square_size - self.az,
+					Sets.square_size,
+					Sets.square_size,
+				]
+			)
 	
 	@property
 	def cpos(self) -> tuple[int, int]:
@@ -351,6 +393,9 @@ def get_pressed():
 						ButtonsInfo.S = True
 					case pg.K_d:
 						ButtonsInfo.D = True
+					
+					case pg.K_r:
+						ButtonsInfo.R = True
 			case pg.MOUSEBUTTONUP:
 				match event.button:
 					case 1:
@@ -367,6 +412,9 @@ def get_pressed():
 						ButtonsInfo.S = False
 					case pg.K_d:
 						ButtonsInfo.D = False
+					
+					case pg.K_r:
+						ButtonsInfo.R = False
 			case pg.MOUSEWHEEL:
 				ButtonsInfo.mwheel += event.precise_y
 
@@ -381,9 +429,10 @@ def get_block_at(x: int, z: int) -> float:
 	x -= Sets.Sc.h_width // Sets.square_size
 	z -= Sets.Sc.h_height // Sets.square_size
 	
-	# return Sets.noise([x / Sets.period, z / Sets.period]) + 0.5 * Sets.amp
+	return Sets.noise([x / Sets.period, z / Sets.period]) + 0.5 * Sets.amp
 	# return hypot(x, 1000 / (z + 0.0001)) * 0.02
-	return sin((x + 8) / 15) * cos(z / 10) * 0.2 + 0.04 + Sets.water_level
+	# return sin((x + 8) / 15) * cos(z / 10) * 0.2 + 0.04 + Sets.water_level
+	# return (x % 10 + z % 10 > 5 and abs(x) + abs(z) > 40) * Sets.water_level + 0.1
 
 
 class WorldMap:
@@ -393,7 +442,7 @@ class WorldMap:
 	to_gen: list = list()
 	land_map: dict = dict()
 	drop_list: list[Drop] = list()
-	land_colliding: list[Vec2] = list()
+	land_colliding: list[pg.Rect] = list()
 	
 
 class EnemyList:

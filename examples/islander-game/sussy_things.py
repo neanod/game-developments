@@ -31,17 +31,22 @@ def get_color(n) -> pg.Color:
 	:type n: float
 	:return: color
 	"""
-	amplitude = Sets.amp
-	water_level = Sets.water_level
-	if n <= water_level:
-		minimum = 50
-		r = g = 0
-		b = clamp(int(n / water_level * (255 - minimum) + minimum), 0, 255)
-		return pg.Color(r, g, b)
-	r = min(255, int((((n + 0.3) / amplitude) ** 5) * 455))
-	g = 200
-	b = 0
-	return pg.Color(r, g, b)
+	match n:
+		case 10:
+			# bridge
+			return pg.Color(55, 50, 0)
+		case _:
+			amplitude = Sets.amp
+			water_level = Sets.water_level
+			if n <= water_level:
+				minimum = 50
+				r = g = 0
+				b = clamp(int(n / water_level * (255 - minimum) + minimum), 0, 255)
+				return pg.Color(r, g, b)
+			r = min(255, int((((n + 0.3) / amplitude) ** 5) * 455))
+			g = 200
+			b = 0
+			return pg.Color(r, g, b)
 
 
 def exit_game():
@@ -146,19 +151,37 @@ class Vec2:
 		return self.x, self.y
 
 
-if __name__ == '__main__':
-	def test_collisionCircleLine():
-		circle = {'x': 0, 'y': 0, 'radius': 1}
-		line = {'p1': {'x': -1, 'y': -1}, 'p2': {'x': 1, 'y': 1}}
-		
-		assert collisionCircleLine(circle, line) == True
-		
-		circle = {'x': 0, 'y': 0, 'radius': 1}
-		line = {'p1': {'x': -2, 'y': -2}, 'p2': {'x': 2, 'y': 2}}
-		
-		assert collisionCircleLine(circle, line) == False
-		
-		print("All tests passed.")
-	
-	
-	test_collisionCircleLine()
+def manhattan_distance(pos1, pos2):
+	return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+
+def bresenham(x0, y0, x1, y1):
+	dx = abs(x1 - x0)
+	dy = abs(y1 - y0)
+	sx = 1 if x0 < x1 else -1
+	sy = 1 if y0 < y1 else -1
+	err = dx - dy
+	res = []
+	while True:
+		res.append((x0, y0))
+		if x0 == x1 and y0 == y1:
+			break
+		e2 = 2 * err
+		if e2 > -dy:
+			err -= dy
+			x0 += sx
+		if e2 < dx:
+			err += dx
+			y0 += sy
+	return res
+
+
+def bresenham_with_width(width, x0, y0, x1, y1):
+	tin = set(bresenham(x0, y0, x1, y1))
+	res = set()
+	cell: tuple[int, int]
+	for cell in tin:
+		for delta_x in range(-width // 2 + 1, width // 2 + 1):
+			for delta_y in range(-width // 2 + 1, width // 2 + 1):
+				res.add((cell[0] + delta_x, cell[1] + delta_y))
+	return res
