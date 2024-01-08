@@ -6,6 +6,7 @@ from player import Player
 import asyncio
 import pygame_gui
 
+
 PLAYER = Player(land=WorldMap, enemy_list=EnemyList.enemies, hp_max=1000)
 
 
@@ -46,7 +47,14 @@ def pressed_logic():
 		# (True, True, False, False) | (True, False, False, True) | (False, False, True, True) | (False, True, True, False)
 	if ButtonsInfo.R:
 		ButtonsInfo.R = Sets.flush_bridge_building
-		PLAYER.score -= build_bridge(PLAYER.bpos, get_clicked_rectangle(pg.mouse.get_pos(), get_camera_offset(Camera.pos)), PLAYER.score)
+		PLAYER.score -= build_bridge(
+			PLAYER.bpos,
+			get_clicked_rectangle(
+				pg.mouse.get_pos(),
+				get_camera_offset(Camera.pos)
+			),
+			PLAYER.score
+		)
 
 
 async def main():
@@ -57,11 +65,11 @@ async def main():
 	
 	async def setup():
 		PLAYER.pos = Vec2(Sets.Sc.center)
-		Camera.pos = PLAYER.pos.xy
 		pg.init()
 		pg.display.set_caption("Island Capture.")
 		pre_world_gen(sc)
 		PLAYER.go_to_nearest_block()
+		Camera.pos = PLAYER.pos + (0, 2000)
 		
 		PLAYER.manager = pygame_gui.UIManager(Sets.Sc.res)
 		PLAYER.hp_bar = pygame_gui.elements.UIProgressBar(

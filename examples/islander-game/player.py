@@ -288,7 +288,7 @@ class Player:
 			surface=sc,
 			color=self.color,
 			center=self.pos - offset,
-			radius=Sets.square_size // 1.5,
+			radius=Sets.square_size // 1.9,
 			width=5,
 		)
 		if self.fire_gun_texture is None:

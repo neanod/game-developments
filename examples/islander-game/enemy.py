@@ -54,7 +54,7 @@ class Enemy:
 		"""
 		
 		class RP:
-			hp_bar_relative = Rect((0, 0), (7 * Sets.square_size, 1.5 * Sets.square_size))
+			hp_bar_relative = Rect((0, 0), (30 * sqrt(Sets.square_size), 8 * sqrt(Sets.square_size)))
 			draw_path = True
 			hp_bar_offset = Vec2((-hp_bar_relative.width * 0.5, -Sets.square_size * 2.5))
 
@@ -207,7 +207,7 @@ class Enemy:
 						return
 					
 					to = (self.path[1][0] + 0.5) * Sets.square_size, (self.path[1][1] + 0.5) * Sets.square_size
-					if dist(self.xy, Vec2(self.path[0]) * Sets.square_size) < self.speed_def * 6:
+					if dist(self.xy, Vec2(self.path[0]) * Sets.square_size) < self.speed_def * 0.8 * Sets.square_size:
 						self.path.pop(0)
 					
 					self.rangle = -atan2(*(self.pos - to))

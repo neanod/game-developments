@@ -27,7 +27,7 @@ def clamp(_x: int | float, _min: int | float, _max: int | float) -> int | float:
 
 
 def heuristic_cost_estimate(pos, goal, *, random_k=0) -> float:
-	return dist(pos, goal) + random.randint(0, random_k) / 10
+	return dist(pos, goal)
 
 
 def camera_logic(camera_pos, player_pos, t, sc) -> list[int, int]:
@@ -42,25 +42,12 @@ def camera_logic(camera_pos, player_pos, t, sc) -> list[int, int]:
 	"""
 	if None in player_pos:
 		return Sets.Sc.center
-	# camera_pos = [
-	# 	clamp(
-	# 		camera_pos[0],
-	# 		player_pos[0] - Sets.Sc.cam_to_player_box_size[0] // 2,
-	# 		player_pos[0] + Sets.Sc.cam_to_player_box_size[0] // 2,
-	# 	),
-	# 	clamp(
-	# 		camera_pos[1],
-	# 		player_pos[1] - Sets.Sc.cam_to_player_box_size[1] // 2,
-	# 		player_pos[1] + Sets.Sc.cam_to_player_box_size[1] // 2,
-	# 	)
-	# ]
 	delta = Vec2(player_pos) - camera_pos
-	camera_pos = Vec2(camera_pos) + Vec2(delta) / 10
+	camera_pos = Vec2(camera_pos) + Vec2(delta) * Sets.camera_movement_k
 	if t % 6:
 		return camera_pos
 	# world_generation
 	camera_offset = camera_pos[0] - Sets.Sc.h_width, camera_pos[1] - Sets.Sc.h_height
-	
 	gen_size_x, gen_size_z = Sets.Sc.width // Sets.square_size + Sets.gen_dist * 2, Sets.Sc.height // Sets.square_size + Sets.gen_dist * 2
 	left = int(camera_offset[0] // Sets.square_size - Sets.gen_dist + 1)
 	top = int(camera_offset[1] // Sets.square_size - Sets.gen_dist + 1)
@@ -124,27 +111,33 @@ def build_bridge(pos1: tuple, pos2: tuple, score_available: int):
 	way: set[tuple[int, int]] = bresenham_with_width(Sets.bridge_width, *pos1, *pos2)
 	wasted = 0
 	# print(pg.Rect(1740, 2205, 15, 15) in WorldMap.land_colliding)
-	for block in way:
+	for x, y in way:
 		rect = pg.Rect(
-			block[0] * Sets.square_size,
-			block[1] * Sets.square_size,
+			x * Sets.square_size,
+			y * Sets.square_size,
 			Sets.square_size,
 			Sets.square_size
 		)
 		if rect in WorldMap.land_colliding:
-			WorldMap.land_map[block] = 10
+			delta = setblock_bridge(x, y)
+			score_available -= delta
+			wasted += delta
+			if not (Sets.Cheats.infinity_money or score_available):
+				return wasted
+			WorldMap.land_map[x, y] = 10
 			WorldMap.land_colliding.remove(rect)
-			for i in range(len(WorldMap.chunks)):
-				ch = WorldMap.chunks[i]
-				if ch.cpos == (block[0] // WorldMap.chunk_size, block[1] // WorldMap.chunk_size):
-					if i:
-						WorldMap.chunks[0], WorldMap.chunks[i] = WorldMap.chunks[i], WorldMap.chunks[0]
-					ch.add_block(*block, height=10, round_borders=False)
-					score_available -= 1
-					wasted += 1
-					if not score_available:
-						break
 	return wasted
+
+
+def setblock_bridge(x: int, y: int) -> bool:
+	for i in range(len(WorldMap.chunks)):
+		ch = WorldMap.chunks[i]
+		if ch.cpos == (x // WorldMap.chunk_size, y // WorldMap.chunk_size):
+			ch.add_block(x, y, height=10, round_borders=False)
+			return True
+	else:
+		raise ValueError("cant find chunk")
+	return False
 
 
 def clamp_color_channel(_x) -> int:
@@ -160,10 +153,17 @@ def pre_world_gen(sc) -> None:
 	without_enemy_bound = -10
 	for x in range(-bound, Sets.Sc.width // Sets.square_size + bound):
 		for z in range(-bound, Sets.Sc.height // Sets.square_size + bound):
-			world_post_gen(x, z, sc, spawn_enemy=all((
-				x not in range(-without_enemy_bound, Sets.Sc.width // Sets.square_size + without_enemy_bound),
-				z not in range(-without_enemy_bound, Sets.Sc.height // Sets.square_size + without_enemy_bound)
-			)))
+			world_post_gen(
+				x,
+				z,
+				sc,
+				spawn_enemy=all(
+					(
+						x not in range(-without_enemy_bound, Sets.Sc.width // Sets.square_size + without_enemy_bound),
+						z not in range(-without_enemy_bound, Sets.Sc.height // Sets.square_size + without_enemy_bound)
+					)
+				)
+			)
 
 
 def world_post_gen(x_pos, z_pos, sc, *, spawn_enemy=True, spawn_block=True) -> None:

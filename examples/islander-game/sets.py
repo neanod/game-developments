@@ -20,14 +20,15 @@ class ButtonsInfo:
 
 
 class Sets:
+	camera_movement_k: float = 0.01
 	bridge_width: int = 3
 	running = True
 	t = 0
 	FPS: int = 60
 	# square_size in [120, 60, 40, 30, 24, 20, 12, 10, 5, 2, 1]
-	square_size: int = 15
+	square_size: int = 33
 	matching: bool = True
-	enemy_spawn_chance = 0.0008
+	enemy_spawn_chance = 0.03
 	
 	flush_bridge_building = False
 	spawn_zone: float = 0
@@ -71,10 +72,13 @@ class Sets:
 		a_star_min: int = 110
 		a_star_max: int = ...
 		# max distance between end point of way and target
-		delta_offset_f = lambda __p, __q: dist(__p.xy, __q.xy) > 100
+		delta_offset_f = lambda p, q: dist(p.xy, q.xy) > 100
 	II.a_star_max = Sc.width // 2
 	
-
+	class Cheats:
+		infinity_money = True
+		
+		
 class SelectedInfo:
 	LMB_POS = None
 	RMB_POS = None
